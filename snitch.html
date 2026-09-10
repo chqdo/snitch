@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SNITCH</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:    #060409;
+      --bg-2:  #080510;
+      --green: #39ff14;
+      --amber: #ffb547;
+      --red:   #ff5c5c;
+      --text:  rgba(240,235,248,0.98);
+      --mid:   rgba(214,205,230,0.92);
+      --dim:   rgba(190,178,212,0.72);
+      --mono: 'IBM Plex Mono','Courier New',monospace;
+
+      --accent:#bd93f9;
+      --a1:rgba(189,147,249,0.62);
+      --a2:rgba(189,147,249,0.34);
+      --a3:rgba(189,147,249,0.15);
+      --a4:rgba(189,147,249,0.07);
+      --a-glow:rgba(189,147,249,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html,body {
+      background:
+        radial-gradient(70% 55% at 20% 25%, rgba(189,147,249,0.09), transparent 70%),
+        radial-gradient(60% 50% at 85% 78%, rgba(150,110,230,0.06), transparent 70%),
+        var(--bg);
+    }
+    body {
+      color: var(--text); font-family: var(--mono);
+      min-height: 100vh; display: flex; justify-content: center;
+      padding: 26px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    #bg-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none; display: block;
+      background: transparent;
+    }
+
+    .wrap { width: 100%; position: relative; z-index: 2; display: flex; flex-direction: column; gap: 28px; }
+    .frame {
+      position: relative; border: 0.5px solid var(--a3); padding: 52px 60px 36px;
+      background: rgba(9,6,16,0.55);
+    }
+    .frame.no-labels { padding: 38px 60px 36px; }
+    .frame::before, .frame::after, .cb-bl, .cb-br {
+      content: ''; position: absolute; width: 32px; height: 32px; pointer-events: none;
+    }
+    .frame::before { top:-1px; left:-1px;  border-top:1.5px solid var(--a1); border-left:1.5px solid var(--a1); }
+    .frame::after  { top:-1px; right:-1px; border-top:1.5px solid var(--a1); border-right:1.5px solid var(--a1); }
+    .cb-bl { bottom:-1px; left:-1px;  border-bottom:1.5px solid var(--a1); border-left:1.5px solid var(--a1); }
+    .cb-br { bottom:-1px; right:-1px; border-bottom:1.5px solid var(--a1); border-right:1.5px solid var(--a1); }
+
+    .hero { margin-bottom: 0; }
+    .site-name {
+      font-size: 88px; font-weight: 500; color: var(--accent);
+      letter-spacing: 0.04em; text-shadow: 0 0 36px var(--a-glow);
+      display: inline-block; line-height: 0.95;
+    }
+    .site-name .sn-home {
+      color: var(--a1); text-shadow: none; margin-right: 0.02em;
+      transition: color .18s, text-shadow .18s;
+    }
+    .site-name .sn-home:hover, .site-name .sn-home:focus-visible {
+      color: var(--accent); outline: none;
+      text-shadow: 0 0 22px var(--a-glow);
+    }
+    .site-sub {
+      font-size: 13.5px; color: var(--dim); letter-spacing: 0.22em;
+      text-transform: uppercase; margin-top: 16px;
+    }
+    .site-sub b { color: var(--mid); font-weight: 500; }
+
+    .tools { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tbtn {
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+      letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim);
+      background: rgba(0,0,0,0.2); border: 0.5px solid var(--a3);
+      padding: 11px 17px; cursor: pointer;
+      transition: border-color .18s, color .18s, background .18s, transform .1s;
+    }
+    .tbtn:hover { border-color: var(--accent); color: var(--accent); background: var(--a4); }
+    .tbtn:active { transform: translateY(1px); }
+    .tbtn.primary { border-color: var(--a2); color: var(--mid); }
+    .tbtn.primary:hover { border-color: var(--accent); color: var(--accent); background: var(--a4); }
+    .ab-box { border: 0.5px solid var(--a3); background: rgba(0,0,0,0.2); padding: 16px 20px; }
+    .ab-box p { margin: 0; }
+    .ab-lead { margin: 4px 0 18px; }
+    .ab-lead p { font-size: 15px; line-height: 1.75; color: var(--mid); letter-spacing: 0.01em; }
+    .ab-lead b { color: var(--accent); font-weight: 500; }
+
+    .why { margin-bottom: 24px; }
+    .why summary {
+      display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+      font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim);
+      list-style: none; padding: 8px 14px; border: 0.5px solid var(--a3); transition: color .16s, border-color .16s;
+    }
+    .why summary::-webkit-details-marker { display: none; }
+    .why summary::before { content: '+'; color: var(--accent); font-size: 13px; line-height: 1; }
+    .why[open] summary::before { content: '\2212'; }
+    .why summary:hover { color: var(--mid); border-color: var(--a2); }
+    .why[open] summary { color: var(--accent); border-color: var(--a2); }
+    .ab-boxes { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .ab-boxes p { font-size: 12.5px; line-height: 1.95; color: var(--mid); }
+    .ab-boxes b { color: var(--text); font-weight: 500; }
+    .ab-boxes .lead { color: var(--accent); letter-spacing: 0.04em; }
+
+    @keyframes flash { 0%, 100% { background: transparent; } 25%, 60% { background: var(--a2); } }
+    .stat.flash { animation: flash 1.3s ease; }
+
+    .div { display:flex; align-items:center; gap:14px; margin:0 0 20px; }
+    .div-tag {
+      display:flex; align-items:center; gap:8px;
+      font-size:18px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent);
+      padding: 4px 14px; border: 0.5px solid var(--a3);
+    }
+    .div-tag::before { content:'\203A'; color: var(--a2); }
+    .div-line { flex:1; height:0.5px; background: linear-gradient(to right, var(--a3), transparent); }
+    .div-note { font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--a1); white-space:nowrap; }
+
+    .grid { border: 0.5px solid var(--a3); background: rgba(0,0,0,0.18); }
+    .stat {
+      display: grid; grid-template-columns: 210px 1fr auto; gap: 20px;
+      align-items: baseline; padding: 12px 20px; cursor: pointer;
+      border-bottom: 0.5px solid var(--a4); transition: background .16s;
+    }
+    .stat:last-child { border-bottom: none; }
+    .stat:hover { background: var(--a4); }
+    .stat::before {
+      content: attr(data-lbl); font-size: 10.5px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--dim);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sv {
+      font-size: 13.5px; font-weight: 500; color: var(--text); letter-spacing: 0.02em;
+      word-break: break-word; line-height: 1.5;
+    }
+    .stat:hover .sv { color: var(--accent); }
+    .sv.mono-wrap { font-size: 11.5px; color: var(--mid); white-space: pre-wrap; }
+    .ss { font-size: 10px; color: var(--dim); letter-spacing: 0.06em; text-align: right; white-space: nowrap; }
+
+
+    .fi { opacity:0; transform:translateY(6px); animation:fu .5s ease forwards; }
+    @keyframes fu { to { opacity:1; transform:translateY(0); } }
+
+    #toast {
+      position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+      background:var(--a4); border:0.5px solid var(--a2);
+      color:var(--accent); font-family:var(--mono); font-size:12.5px;
+      letter-spacing:0.15em; padding:8px 18px;
+      opacity:0; transition:opacity 0.2s; pointer-events:none; z-index:10002;
+    }
+    #toast.show { opacity:1; }
+
+    .geomap-wrap { overflow-x:auto; border:0.5px solid var(--a3); background:rgba(0,0,0,0.3); padding:16px 18px; }
+    #geomap {
+      font-family:var(--mono); font-size:8px; line-height:1.12; letter-spacing:0.5px;
+      color:var(--a2); white-space:pre; display:inline-block; min-width:100%;
+      text-shadow:0 0 1px var(--a4);
+    }
+    .geo-ping {
+      color:var(--accent); font-weight:600;
+      animation:geopulse 1.7s ease-in-out infinite;
+    }
+    @keyframes geopulse {
+      0%,100% { opacity:1;   text-shadow:0 0 4px var(--accent); }
+      50%     { opacity:0.35; text-shadow:0 0 12px var(--accent), 0 0 22px var(--a1); }
+    }
+    @media (prefers-reduced-motion: reduce) { .geo-ping { animation:none; text-shadow:0 0 10px var(--accent); } }
+    @media (max-width:600px) { #geomap { font-size:6px; letter-spacing:0.3px; } }
+
+    .score { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:16px 0 10px; }
+    .score-note { font-size:11px; line-height:1.65; color:var(--dim); margin:0 0 24px; }
+    .score-note a { color:var(--accent); border-bottom:0.5px solid var(--a3); }
+    .score-note a:hover { border-bottom-color:var(--accent); }
+    .score-item { border:0.5px solid var(--a3); background:rgba(0,0,0,0.2); padding:16px 18px; display:flex; flex-direction:column; gap:6px; min-width:0; }
+    .score-item:nth-child(1) { align-items:flex-start; text-align:left; }
+    .score-item:nth-child(2) { align-items:center; text-align:center; }
+    .score-item:nth-child(3) { align-items:flex-end; text-align:right; }
+    .score-k { font-size:9.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--dim); }
+    .score-v { font-size:21px; font-weight:500; color:var(--accent); letter-spacing:0.02em; }
+    .score-sub { font-size:11px; line-height:1.55; color:var(--dim); letter-spacing:0.01em; }
+    @media (max-width:760px) {
+      .score { grid-template-columns:1fr; gap:18px; }
+      .score-item:nth-child(1), .score-item:nth-child(2), .score-item:nth-child(3) { align-items:flex-start; text-align:left; }
+    }
+
+    .split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .split-col { min-width:0; display:flex; flex-direction:column; }
+    .split .div { margin:0 0 14px; }
+    .split-col .geomap-wrap, .log-wrap { height:420px; overflow:auto; }
+    .split #geomap { font-size:6.5px; letter-spacing:0.35px; }
+    .log-wrap { border:0.5px solid var(--a3); background:rgba(0,0,0,0.3); padding:12px 15px; }
+    #log { font-family:var(--mono); font-size:10.5px; line-height:1.75; color:var(--dim); }
+    .log-line { padding:1px 0; word-break:break-word; }
+    .log-line .t { color:var(--a1); }
+    .log-line b { color:var(--accent); font-weight:500; }
+    @media (max-width:900px) { .split { grid-template-columns:1fr; } .split-col .geomap-wrap, .log-wrap { height:300px; } .split #geomap { font-size:6px; } }
+
+    .stat.act .sv { color:var(--accent); }
+
+    .reduce { font-size:12.5px; line-height:1.9; color:var(--mid); }
+    .reduce > p { margin:0 0 22px; color:var(--dim); }
+    .reduce ol { list-style:none; margin:0; counter-reset:r; }
+    .reduce li { counter-increment:r; position:relative; padding-left:40px; margin-bottom:20px; }
+    .reduce li:last-child { margin-bottom:0; }
+    .reduce li::before { content:counter(r); position:absolute; left:0; top:1px; font-size:11px; color:var(--accent); border:0.5px solid var(--a3); padding:2px 8px; letter-spacing:0.05em; }
+    .reduce li b { display:block; color:var(--text); font-weight:500; margin-bottom:3px; }
+    .reduce li span { display:block; }
+    .reduce a { color:var(--accent); border-bottom:0.5px solid var(--a3); }
+    .reduce a:hover { border-bottom-color:var(--accent); }
+    .reduce code { font-family:var(--mono); color:var(--accent); font-size:0.92em; background:var(--a4); padding:1px 4px; }
+    .reduce em { font-style:normal; color:var(--text); }
+
+    @media (max-width:900px) { .site-name { font-size: 64px; } }
+    @media (max-width:640px) {
+      body { padding: 16px; }
+      .frame { padding:28px 18px 22px; }
+      .frame.no-labels { padding: 22px 18px 22px; }
+      .stat { grid-template-columns: 1fr; gap: 2px; padding: 11px 14px; }
+      .stat::before { font-size: 9.5px; }
+      .ss { text-align: left; white-space: normal; }
+      .div-tag { font-size: 15px; padding: 3px 11px; }
+      .div-note { display:none; }
+      .site-name { font-size: 44px; }
+      .site-sub { font-size: 10px; letter-spacing:0.16em; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<div class="wrap">
+
+  <div class="frame">
+    <div class="cb-bl"></div>
+    <div class="cb-br"></div>
+    <div class="hero fi">
+      <h1 class="site-name"><a href="https://014.ca" class="sn-home no-scramble" title="014.ca">014/</a><span>SNITCH</span></h1>
+      <div class="site-sub"><b>Everything your browser gives away</b><span> &middot; runs client-side</span></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi" style="margin-top:0"><div class="div-tag">About</div><div class="div-line"></div><div class="div-note" id="scan-status">scanning&#8230;</div></div>
+    <div class="ab-box ab-lead fi"><p id="broker-line">Reading what a data&nbsp;broker script would make of you&#8230;</p></div>
+    <details class="why fi">
+      <summary>Why this matters</summary>
+      <div class="ab-boxes">
+        <div class="ab-box"><p><span class="lead">Every website you open is handed most of what you see below</span>, automatically, the moment the page loads. You did not agree to it. No prompt, no banner, no "we value your privacy" box to close. It just happens, the way a room knows when someone walks in. On their own these details are dull: your screen is a certain width, your machine has a certain number of cores, your clock is set to a certain time zone, and nobody cares about any one of them. Put together, they are a <b>fingerprint</b>, and not as a figure of speech. It is a combination specific enough to pick your browser out of hundreds of millions, and to keep recognising it on the next site you open, and the one after that, with no cookie, no account, and nothing you are able to clear.</p></div>
+        <div class="ab-box"><p>This is not a corner case that worries security researchers. It is how a large slice of the web pays its bills. Ad networks use it to follow you around; data brokers collect those trails, join them together, and sell the result to advertisers, insurers, political campaigns, and roughly anyone with a form of payment; some shops use it to quietly show you a higher price. A good deal of what is sold as "anonymous analytics" is exactly this, in a nicer outfit. And the habits most people trust do very little to stop it: clearing your cookies changes nothing, because no cookie is involved; a private window forgets your history, not your fingerprint; a VPN swaps your IP address and your apparent city, which is worth doing, and leaves the other forty-odd signals exactly where they were. There is even an irritating twist, where piling on privacy add-ons and flipping every switch tends to make you easier to identify rather than harder, because now you are the one person online with that precise unusual setup. Fingerprinting rewards looking like everyone else.</p></div>
+        <div class="ab-box"><p>The word you will be offered for all of this is <b>anonymous</b>. In the narrow sense that your name is not literally stapled to it, fine, but a profile that consistently lands on one real person does not need a name to decide which ads you see, which price you are quoted, or what a background-check company believes about you. SNITCH does one thing: it runs the same reads a tracker would run, and shows you the answers instead of sending them anywhere. Nothing here is uploaded, logged, or stored, and there is no analytics on the analytics. Think of it as the itemised receipt every other website quietly forgets to hand you.</p></div>
+      </div>
+    </details>
+    <div class="score fi">
+      <div class="score-item">
+        <span class="score-k">How easy you are to spot</span>
+        <span class="score-v" id="x-unique">estimating&#8230;</span>
+        <span class="score-sub" id="x-unique-sub">working it out</span>
+      </div>
+      <div class="score-item">
+        <span class="score-k">Read without asking</span>
+        <span class="score-v" id="x-signals">&#8230;</span>
+        <span class="score-sub" id="x-signals-sub">things this page just learned about you</span>
+      </div>
+      <div class="score-item">
+        <span class="score-k">All of it weighs</span>
+        <span class="score-v" id="x-bytes">&#8230;</span>
+        <span class="score-sub" id="x-bytes-sub">a tracker ships that before the page finishes loading</span>
+      </div>
+    </div>
+    <p class="score-note fi">The "1 in N" above is a rough ceiling from a few signals, weighted by hand, not a live count. For an actual measurement of how identifiable your browser is, run <a href="https://coveryourtracks.eff.org/" target="_blank" rel="noopener">EFF's Cover Your Tracks</a>.</p>
+    <div class="tools fi">
+      <button class="tbtn primary no-scramble" id="t-html">Export report .html</button>
+      <button class="tbtn no-scramble" id="t-json">Export .json</button>
+      <button class="tbtn no-scramble" id="t-txt">Export .txt</button>
+      <button class="tbtn no-scramble" id="t-img">Save image</button>
+      <button class="tbtn no-scramble" id="t-copy">Copy to clipboard</button>
+      <button class="tbtn no-scramble" id="t-rescan">Rescan</button>
+    </div>
+  </div>
+
+  <div class="frame no-labels">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="split fi">
+      <div class="split-col">
+        <div class="div"><div class="div-tag">Global position</div><div class="div-line"></div><div class="div-note" id="geomap-coord">awaiting fix</div></div>
+        <div class="geomap-wrap"><pre id="geomap" aria-hidden="true"></pre></div>
+      </div>
+      <div class="split-col">
+        <div class="div"><div class="div-tag">Activity log</div><div class="div-line"></div><div class="div-note" id="log-count">0 events</div></div>
+        <div class="log-wrap"><div id="log"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Network">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Network</div><div class="div-line"></div><div class="div-note">public</div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="IPv4"><div class="sv" id="ip4">resolving&#8230;</div><div class="ss" id="ip4-sub">address class</div></div>
+      <div class="stat" data-lbl="IPv6"><div class="sv sm" id="ip6">resolving&#8230;</div><div class="ss">global address</div></div>
+      <div class="stat" data-lbl="Hostname / rDNS"><div class="sv sm" id="host">resolving&#8230;</div><div class="ss">reverse dns pointer</div></div>
+      <div class="stat" data-lbl="ASN"><div class="sv" id="asn">resolving&#8230;</div><div class="ss" id="asn-sub">autonomous system</div></div>
+      <div class="stat" data-lbl="Org / ISP"><div class="sv sm" id="org">resolving&#8230;</div><div class="ss" id="org-sub">network operator</div></div>
+      <div class="stat" data-lbl="Effective type"><div class="sv" id="conn">-</div><div class="ss">navigator.connection</div></div>
+      <div class="stat" data-lbl="Downlink"><div class="sv" id="downlink">-</div><div class="ss">estimated throughput</div></div>
+      <div class="stat" data-lbl="Round-trip time"><div class="sv" id="rtt">-</div><div class="ss">connection rtt</div></div>
+      <div class="stat" data-lbl="WebRTC candidates"><div class="sv sm" id="rtcip">probing&#8230;</div><div class="ss">local network exposure</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Location">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Location</div><div class="div-line"></div><div class="div-note">ip-derived</div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="City"><div class="sv" id="city">resolving&#8230;</div><div class="ss" id="city-sub">locality</div></div>
+      <div class="stat" data-lbl="Region"><div class="sv" id="region">resolving&#8230;</div><div class="ss" id="region-sub">state / province</div></div>
+      <div class="stat" data-lbl="Country"><div class="sv" id="country">resolving&#8230;</div><div class="ss" id="country-sub">iso code</div></div>
+      <div class="stat" data-lbl="Postal"><div class="sv" id="postal">resolving&#8230;</div><div class="ss">approximate</div></div>
+      <div class="stat" data-lbl="Coordinates"><div class="sv sm" id="coords">resolving&#8230;</div><div class="ss">latitude, longitude</div></div>
+      <div class="stat" data-lbl="Timezone"><div class="sv sm" id="tz">resolving&#8230;</div><div class="ss" id="tz-sub">iana zone</div></div>
+      <div class="stat" data-lbl="Timezone check"><div class="sv sm" id="tzcheck">-</div><div class="ss" id="tzcheck-sub">browser clock vs IP</div></div>
+      <div class="stat" data-lbl="Locale vs country"><div class="sv sm" id="loccheck">-</div><div class="ss" id="loccheck-sub">language region vs IP</div></div>
+      <div class="stat act" data-lbl="Precise location"><div class="sv" id="geopeek">not requested</div><div class="ss" id="geopeek-sub">click to compare with GPS</div></div>
+      <div class="stat" data-lbl="Currency"><div class="sv" id="curr">resolving&#8230;</div><div class="ss" id="curr-sub">local currency</div></div>
+      <div class="stat" data-lbl="Weather"><div class="sv" id="temp">resolving&#8230;</div><div class="ss" id="cond">your local sky, from your IP alone</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Device">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Device</div><div class="div-line"></div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Operating system"><div class="sv" id="os">-</div><div class="ss" id="os-sub">version</div></div>
+      <div class="stat" data-lbl="Platform"><div class="sv" id="platform">-</div><div class="ss" id="platform-sub">architecture</div></div>
+      <div class="stat" data-lbl="Form factor"><div class="sv" id="formfactor">-</div><div class="ss" id="formfactor-sub">client hint</div></div>
+      <div class="stat" data-lbl="Pointer / touch"><div class="sv sm" id="pointer">-</div><div class="ss" id="pointer-sub">input capability</div></div>
+      <div class="stat" data-lbl="CPU threads"><div class="sv" id="cores">-</div><div class="ss">logical cores</div></div>
+      <div class="stat" data-lbl="Device memory"><div class="sv" id="mem">-</div><div class="ss">reported lower bound</div></div>
+      <div class="stat" data-lbl="Battery"><div class="sv" id="batt">-</div><div class="ss" id="batt-sub">charge state</div></div>
+      <div class="stat" data-lbl="JS heap limit"><div class="sv" id="heap">-</div><div class="ss">performance.memory</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Display">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Display</div><div class="div-line"></div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Screen"><div class="sv" id="screen">-</div><div class="ss" id="screen-sub">reported resolution</div></div>
+      <div class="stat" data-lbl="Available"><div class="sv" id="avail">-</div><div class="ss">minus system chrome</div></div>
+      <div class="stat" data-lbl="Viewport"><div class="sv" id="vp">-</div><div class="ss">live inner window</div></div>
+      <div class="stat" data-lbl="Pixel ratio"><div class="sv" id="dpr">-</div><div class="ss">device / css px</div></div>
+      <div class="stat" data-lbl="Color depth"><div class="sv" id="depth">-</div><div class="ss" id="gamut-sub">bits &middot; gamut</div></div>
+      <div class="stat" data-lbl="Dynamic range"><div class="sv" id="hdr">-</div><div class="ss">sdr / hdr</div></div>
+      <div class="stat" data-lbl="Orientation"><div class="sv" id="orient">-</div><div class="ss">screen.orientation</div></div>
+      <div class="stat" data-lbl="Refresh rate"><div class="sv" id="hz">measuring&#8230;</div><div class="ss">measured, 60 frames</div></div>
+      <div class="stat" data-lbl="Reduced motion"><div class="sv" id="rmotion">-</div><div class="ss">prefers-reduced-motion</div></div>
+      <div class="stat" data-lbl="Color scheme"><div class="sv" id="cscheme">-</div><div class="ss">prefers-color-scheme</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Browser">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Browser</div><div class="div-line"></div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Browser"><div class="sv" id="browser">-</div><div class="ss" id="browser-sub">version</div></div>
+      <div class="stat" data-lbl="Engine"><div class="sv" id="engine">-</div><div class="ss">layout engine</div></div>
+      <div class="stat" data-lbl="Languages"><div class="sv sm" id="langs">-</div><div class="ss" id="lang-sub">Accept-Language order</div></div>
+      <div class="stat" data-lbl="Do Not Track"><div class="sv" id="dnt">-</div><div class="ss" id="gpc-sub">dnt &middot; gpc</div></div>
+      <div class="stat" data-lbl="Cookies"><div class="sv" id="cookies">-</div><div class="ss">navigator.cookieEnabled</div></div>
+      <div class="stat" data-lbl="Ad-class element"><div class="sv" id="adblock">testing&#8230;</div><div class="ss">bait .ads div visibility</div></div>
+      <div class="stat" data-lbl="PDF viewer"><div class="sv" id="pdf">-</div><div class="ss">navigator.pdfViewerEnabled</div></div>
+      <div class="stat" data-lbl="Touch API"><div class="sv" id="touchapi">-</div><div class="ss">ontouchstart present</div></div>
+      <div class="stat" data-lbl="User agent" style="grid-column:1/-1"><div class="sv mono-wrap" id="ua">-</div><div class="ss" id="uadata-sub">navigator.userAgent</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="GPU">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">GPU</div><div class="div-line"></div><div class="div-note">webgl</div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Vendor"><div class="sv sm" id="gpu-vendor">-</div><div class="ss">unmasked vendor</div></div>
+      <div class="stat" data-lbl="Renderer"><div class="sv sm" id="gpu-renderer">-</div><div class="ss">unmasked renderer</div></div>
+      <div class="stat" data-lbl="WebGL version"><div class="sv sm" id="gpu-ver">-</div><div class="ss" id="gpu-shading">shading language</div></div>
+      <div class="stat" data-lbl="Max texture"><div class="sv" id="gpu-tex">-</div><div class="ss">MAX_TEXTURE_SIZE</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Fingerprint">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Fingerprint</div><div class="div-line"></div><div class="div-note">deterministic</div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Composite ID"><div class="sv" id="fp-id">computing&#8230;</div><div class="ss">fnv-1a of all signals</div></div>
+      <div class="stat" data-lbl="Canvas hash"><div class="sv" id="fp-canvas">computing&#8230;</div><div class="ss">2d text + shape render</div></div>
+      <div class="stat" data-lbl="WebGL hash"><div class="sv" id="fp-webgl">computing&#8230;</div><div class="ss">params + extensions</div></div>
+      <div class="stat" data-lbl="Audio hash"><div class="sv" id="fp-audio">computing&#8230;</div><div class="ss">offline oscillator sum</div></div>
+      <div class="stat" data-lbl="Fonts detected"><div class="sv" id="fp-fonts">computing&#8230;</div><div class="ss" id="fp-fonts-sub">from 34-font probe</div></div>
+      <div class="stat" data-lbl="Math signature"><div class="sv sm" id="fp-math">computing&#8230;</div><div class="ss">libm transcendental hash</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Capabilities">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Capabilities</div><div class="div-line"></div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Permissions"><div class="sv sm" id="perms">querying&#8230;</div><div class="ss">Permissions API state</div></div>
+      <div class="stat" data-lbl="Media devices"><div class="sv" id="devices">-</div><div class="ss" id="devices-sub">count by kind</div></div>
+      <div class="stat" data-lbl="Storage quota"><div class="sv" id="quota">-</div><div class="ss" id="quota-sub">StorageManager estimate</div></div>
+      <div class="stat" data-lbl="Storage APIs"><div class="sv sm" id="storeapis">-</div><div class="ss">feature detection</div></div>
+      <div class="stat" data-lbl="Hardware APIs"><div class="sv sm" id="hwapis">-</div><div class="ss">feature detection</div></div>
+      <div class="stat" data-lbl="Gamepads"><div class="sv" id="pads">-</div><div class="ss">currently connected</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels" data-sec="Session">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">Session</div><div class="div-line"></div></div>
+    <div class="grid fi">
+      <div class="stat" data-lbl="Local date"><div class="sv" id="date">-</div><div class="ss" id="date-sub">-</div></div>
+      <div class="stat" data-lbl="Local time"><div class="sv" id="time">--:--:--</div><div class="ss" id="time-sub">timezone</div></div>
+      <div class="stat" data-lbl="UTC offset"><div class="sv" id="utcoff">-</div><div class="ss">minutes from UTC</div></div>
+      <div class="stat" data-lbl="Session uptime"><div class="sv" id="uptime">00:00:00</div><div class="ss">since page load</div></div>
+      <div class="stat" data-lbl="Referrer"><div class="sv sm" id="ref">-</div><div class="ss">document.referrer</div></div>
+      <div class="stat" data-lbl="History length"><div class="sv" id="hist">-</div><div class="ss">entries this tab</div></div>
+      <div class="stat" data-lbl="Page load"><div class="sv" id="load">-</div><div class="ss">navigation duration</div></div>
+      <div class="stat" data-lbl="Tab visibility"><div class="sv" id="vis">-</div><div class="ss">document.visibilityState</div></div>
+      <div class="stat" data-lbl="Return visit"><div class="sv sm" id="revisit">checking&#8230;</div><div class="ss" id="revisit-sub">localStorage compare</div></div>
+    </div>
+  </div>
+
+  <div class="frame no-labels">
+    <div class="cb-bl"></div><div class="cb-br"></div>
+    <div class="div fi"><div class="div-tag">What actually helps</div><div class="div-line"></div><div class="div-note">roughly in order of effect</div></div>
+    <div class="reduce fi">
+      <p>You cannot switch fingerprinting off, but you can go from trivial to follow to genuinely expensive. That is the realistic goal, and it does not take much.</p>
+      <ol>
+        <li>
+          <b>Change your browser first.</b>
+          <span>This is the single biggest move. The <a href="https://www.torproject.org/" target="_blank" rel="noopener">Tor Browser</a> makes almost everyone on it look identical; <a href="https://mullvad.net/browser" target="_blank" rel="noopener">Mullvad Browser</a> is the same engineering without routing through the Tor network. On plain Firefox, turning on <code>privacy.resistFingerprinting</code> (or running the <a href="https://github.com/arkenfox/user.js" target="_blank" rel="noopener">Arkenfox user.js</a>) fakes a common screen size, timezone and canvas. Any one of these does more than the rest of this list combined.</span>
+        </li>
+        <li>
+          <b>Block the scripts, not just the ads.</b>
+          <span>Install <a href="https://ublockorigin.com/" target="_blank" rel="noopener">uBlock Origin</a> and leave it on defaults. It stops most trackers before they get to read anything, which is the only move that helps on a browser you are not willing to replace.</span>
+        </li>
+        <li>
+          <b>Close the side doors.</b>
+          <span>WebRTC can leak your real local and public IP even through a VPN; disable it (<code>media.peerconnection.enabled</code> set to false in Firefox, or uBlock Origin's <em>Prevent WebRTC from leaking local IP</em> toggle). Deny location, camera, mic and notifications by default and grant them per-site when you actually mean to.</span>
+        </li>
+        <li>
+          <b>Treat a VPN as one layer.</b>
+          <span>It rewrites your IP address and the city it maps to, which is worth having, but it leaves the forty-odd other signals on this page untouched. Useful, not a solution.</span>
+        </li>
+        <li>
+          <b>Resist the urge to over-tune.</b>
+          <span>Every exotic extension, custom font and niche setting is one more thing that makes you the only person with that exact combination. If you are not going to commit to a hardened browser, plain and boring beats half-configured.</span>
+        </li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function () {
+  var canvas = document.getElementById('bg-canvas');
+  var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) { canvas.style.display = 'none'; return; }
+  var vs = 'attribute vec2 a_pos; void main(){ gl_Position = vec4(a_pos,0.0,1.0); }';
+  var fs = [
+    '#ifdef GL_FRAGMENT_PRECISION_HIGH',
+    '    precision highp float;',
+    '#else',
+    '    precision mediump float;',
+    '#endif',
+    '    uniform vec2 u_resolution; uniform float u_time;',
+    '    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453123); }',
+    '    float noise(vec2 p){ vec2 i=floor(p); vec2 f=fract(p);',
+    '      float a=hash(i); float b=hash(i+vec2(1.0,0.0)); float c=hash(i+vec2(0.0,1.0)); float d=hash(i+vec2(1.0,1.0));',
+    '      vec2 u=f*f*(3.0-2.0*f);',
+    '      return mix(a,b,u.x)+(c-a)*u.y*(1.0-u.x)+(d-b)*u.x*u.y; }',
+    '    float fbm(vec2 p){ float v=0.0; float amp=0.5;',
+    '      for(int i=0;i<5;i++){ v+=amp*noise(p); p*=2.0; amp*=0.5; } return v; }',
+    '    float bayer4x4(vec2 p){',
+    '      float idx = mod(p.x,4.0)+mod(p.y,4.0)*4.0;',
+    '      if(idx<0.5)return 0.0/16.0; else if(idx<1.5)return 8.0/16.0; else if(idx<2.5)return 2.0/16.0;',
+    '      else if(idx<3.5)return 10.0/16.0; else if(idx<4.5)return 12.0/16.0; else if(idx<5.5)return 4.0/16.0;',
+    '      else if(idx<6.5)return 14.0/16.0; else if(idx<7.5)return 6.0/16.0; else if(idx<8.5)return 3.0/16.0;',
+    '      else if(idx<9.5)return 11.0/16.0; else if(idx<10.5)return 1.0/16.0; else if(idx<11.5)return 9.0/16.0;',
+    '      else if(idx<12.5)return 15.0/16.0; else if(idx<13.5)return 7.0/16.0; else if(idx<14.5)return 13.0/16.0;',
+    '      return 5.0/16.0; }',
+    '    void main(){',
+    '      float pixelSize=3.0;',
+    '      vec2 snapped=floor(gl_FragCoord.xy/pixelSize)*pixelSize;',
+    '      vec2 uv=snapped/u_resolution;',
+    '      vec2 p=uv*vec2(u_resolution.x/u_resolution.y,1.0)*3.2;',
+    '      float t=u_time*0.16;',
+    '      float n=fbm(p+vec2(0.0,-t));',
+    '      n+=fbm(p*2.1-vec2(t*0.45,t*0.1))*0.3;',
+    '      n=clamp(n,0.0,1.0);',
+    '      float dithered=step(bayer4x4(floor(snapped/pixelSize)),n);',
+    '      vec3 bgCol=vec3(0.024,0.016,0.035);',
+    '      vec3 midCol=vec3(0.055,0.035,0.090);',
+    '      vec3 accentCol=vec3(0.741,0.576,0.976);',
+    '      vec3 col=mix(bgCol,midCol,smoothstep(0.35,0.72,n));',
+    '      col=mix(col,accentCol,smoothstep(0.74,0.94,n)*dithered);',
+    '      col+=accentCol*smoothstep(0.80,1.0,n)*0.05;',
+    '      gl_FragColor=vec4(col,1.0);',
+    '    }'
+  ].join('\n');
+  function compile(type,src){ var s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s)); return s; }
+  var program=gl.createProgram();
+  gl.attachShader(program,compile(gl.VERTEX_SHADER,vs));
+  gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(program); gl.useProgram(program);
+  var posBuf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,posBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+  var posLoc=gl.getAttribLocation(program,'a_pos');
+  gl.enableVertexAttribArray(posLoc);
+  gl.vertexAttribPointer(posLoc,2,gl.FLOAT,false,0,0);
+  var u_res=gl.getUniformLocation(program,'u_resolution');
+  var u_time=gl.getUniformLocation(program,'u_time');
+  function resize(){ var w=window.innerWidth,h=window.innerHeight;
+    if(canvas.width!==w||canvas.height!==h){ canvas.width=w; canvas.height=h; gl.viewport(0,0,w,h); } }
+  window.addEventListener('resize',resize); resize();
+  var raf=null,startTime=null;
+  function draw(t){ gl.uniform2f(u_res,canvas.width,canvas.height); gl.uniform1f(u_time,t); gl.drawArrays(gl.TRIANGLES,0,6); }
+  function render(ts){ if(startTime===null)startTime=ts; draw((ts-startTime)/1000); raf=requestAnimationFrame(render); }
+  raf=requestAnimationFrame(render);
+  document.addEventListener('visibilitychange',function(){ if(document.hidden){ cancelAnimationFrame(raf); raf=null; } else { startTime=null; raf=requestAnimationFrame(render); } });
+})();
+
+var $ = function(id){ return document.getElementById(id); };
+var SPIN = /^(resolving|computing|measuring|probing|querying|testing|checking|requesting|estimating|scanning)/i;
+function set(id, val, sub){
+  var el = $(id); if(!el) return;
+  if(val !== undefined && val !== null && String(val) !== ''){
+    el.textContent = val;
+    el.setAttribute('data-clean', String(val));
+  }
+  if(sub !== undefined && sub !== ''){ var s = $(id+'-sub'); if(s){ s.textContent = sub; s.setAttribute('data-clean', String(sub)); } }
+}
+function cleanText(el){
+  if(!el) return '';
+  var c = el.getAttribute && el.getAttribute('data-clean');
+  return (c != null ? c : el.textContent).trim();
+}
+function blank(id){ var t=(($(id)&&$(id).textContent)||'').trim(); return t===''||t==='-'||SPIN.test(t); }
+function fill(id,val,sub){ if(val!=null && String(val)!=='' && blank(id)) set(id,val,sub); }
+var pad = function(n){ return String(n).padStart(2,'0'); };
+function h32(str){ var h=0x811c9dc5; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,0x01000193); } return (h>>>0).toString(16).padStart(8,'0'); }
+function mm(q){ try { return matchMedia(q).matches; } catch(e){ return false; } }
+
+var toastT;
+function showToast(msg){ var el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){ el.classList.remove('show'); },1900); }
+
+var LOG_T0 = performance.now();
+var logCount = 0;
+var logQueue = [];
+var logPump = null;
+function logEvent(msg, val){
+  logQueue.push({ t: (performance.now() - LOG_T0) / 1000, msg: msg, val: (val != null ? String(val) : '') });
+  if (!logPump) logPump = setInterval(flushLog, 75);
+}
+function flushLog(){
+  var el = $('log');
+  if (!el) { clearInterval(logPump); logPump = null; return; }
+  var ev = logQueue.shift();
+  if (!ev) { clearInterval(logPump); logPump = null; return; }
+  var line = document.createElement('div');
+  line.className = 'log-line';
+  var t = document.createElement('span'); t.className = 't';
+  t.textContent = '+' + ev.t.toFixed(2) + 's  ';
+  line.appendChild(t);
+  line.appendChild(document.createTextNode(ev.msg));
+  if (ev.val) {
+    line.appendChild(document.createTextNode('  '));
+    var b = document.createElement('b'); b.textContent = ev.val;
+    line.appendChild(b);
+  }
+  el.appendChild(line);
+  el.parentElement.scrollTop = el.parentElement.scrollHeight;
+  logCount++;
+  var lc = $('log-count'); if (lc) lc.textContent = logCount + ' event' + (logCount === 1 ? '' : 's');
+}
+function downloadBlob(fname, blob){
+  try {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 120);
+    showToast('saved · ' + fname);
+  } catch(e){ showToast('download unavailable'); }
+}
+function haversine(la1, lo1, la2, lo2){
+  var R = 6371, r = Math.PI / 180;
+  var dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  var s = Math.sin(dLa/2)*Math.sin(dLa/2) + Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+document.addEventListener('click', function(e){
+  var card = e.target.closest('.stat'); if(!card || card.classList.contains('act')) return;
+  var v = card.querySelector('.sv'); if(!v) return;
+  var txt = cleanText(v);
+  if(!txt || SPIN.test(txt) || txt === '-') return;
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ showToast('copied · '+txt.slice(0,46)); }).catch(function(){});
+});
+
+logEvent('page opened, scripts already running');
+
+document.querySelectorAll('.fi').forEach(function(el,i){ el.style.animationDelay=(0.04+i*0.04)+'s'; });
+
+(function(){
+  var CHARS = '!<>-_\\/[]{}=+*^?#________';
+  var FRAMES = 14;
+  function scramble(el, target){
+    var frame = 0;
+    var id = setInterval(function(){
+      var out = '';
+      for (var i = 0; i < target.length; i++) {
+        var ch = target[i];
+        if (i < frame * target.length / FRAMES || ch === ' ' || ch === '/' || ch === '.' || ch === ':' || ch === '[' || ch === ']') out += ch;
+        else out += CHARS[Math.random() * CHARS.length | 0];
+      }
+      el.textContent = out;
+      if (++frame > FRAMES) { clearInterval(id); el.textContent = target; }
+    }, 22);
+    return id;
+  }
+  function textLeaves(root){
+    var self = (!root.children.length && root.textContent.trim()) ? [root] : [];
+    var nested = [].slice.call(root.querySelectorAll('*')).filter(function(el){ return !el.children.length && el.textContent.trim(); });
+    return self.concat(nested);
+  }
+  function enable(el){
+    var entries = [];
+    el.addEventListener('mouseenter', function(){
+      entries.forEach(function(e){ clearInterval(e.id); });
+      entries = textLeaves(el).map(function(leaf){
+        var target = leaf.textContent;
+        return { leaf: leaf, target: target, id: scramble(leaf, target) };
+      });
+    });
+    el.addEventListener('mouseleave', function(){
+      entries.forEach(function(e){ clearInterval(e.id); e.leaf.textContent = e.target; });
+      entries = [];
+    });
+  }
+  document.querySelectorAll('.stat, .site-sub, .score-item, .div-tag, .div-note, .site-name > span').forEach(function(el){
+    if(el.closest('.no-scramble')) return;
+    enable(el);
+  });
+})();
+
+var GEO_PRESETS = {
+  s: { w:128, R0:15, S:0.183333, b64:'ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLipAKkBAQEAuLiAqQEBAQEBAQEAjIyMjI0AqKi4uICAgICAgICAuLi4uLiAgICAgICAgICAgICAgICAgICAgICAgIC4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAqLi4qKi4gIC4gLiogIC4uICAuLi4uKkAjIyMjIyMjIyMjIyNAICAgICAgICAgICAgLi4gLiAgICAgICAgICAuLi4uLiAgICAgICAuLkBAQEBAQCogICAgICAgICAuLiAgICAgICAgICAgICAKLiAgICAuKkBAQEAqLi4uLi4uKipAKkAqQEBALi4qQCpAIyMqQCpAKiAgICAuIyMjIyMjIyMjKi4gICAgICAgICAgICAgIC4uKkBALi4uICAgIC4uLi4uKkAjKiMjIyMjIyMjIyMjIyMjIyMjIyNAQEBAIyMjQEBAKi4uLi4uLi4KLi4qICBAQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAKiogLipAI0AuICAgKiMjIyouLiAgICAuLi4gICAgICAgLipAI0BAQCMjIyojQEAjIyMjIyMjIyNAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AKICAgICAuKkBAQC4uLi4qQEAjIyMjIyMjIyMjIyMjQC4gICAgKiMjKioqICAgICAuLiAgICAgICAgICAgICAuICAgQCojIy4uQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAKi4uKiouKkAuLi4gICAKICAgICAgLiAgICAgICAgICAuQCMjIyMjIyMjIyMjIyMjIyogIyMjIyMjIyogICAgICAgICAgICAgICAgIC4qQCAuQEBAQEBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAKiAgICAqQCAgICAgICAKICAgICAgICAgICAgICAgICAgICojIyMjIyMjIyMjIyMjIyMjIyMjI0AuLiouICAgICAgICAgICAgICAgICAgKiMjIyMjIyMjIyMjQEAjIyMjQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLiAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgIC4jIyMjIyMjIyMjIyMjIyMjIyNALi4gICAgICAgICAgICAgICAgICAgIEBAQEAuLioqKiojI0AqLi4uQCMjKiojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLiAuKi4gICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgICpAQCpAQCogICAuLi4qKiojIyMjQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyogLkAgLioqICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgIC5AIyMjIyMjQEBAQEAuICAgICAgICAgICAgICAgICAgICAgICAgKiMjIyMjIyNAQCpAQEBAQCMjIyMjQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMuICAuICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAuKiojIyMuICAgICAuICAgICAgICAgICAgICAgICAgICAgIC4jIyMjIyMjIyMjIyMjIyMjIypAIyMjIypAQCpAKiMjIyMjIyMjIyMjIyMjIyMjIyogICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAuQCNALioqICAgLiAuICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMuKiMjIyMjKiAgICAuIyMjIyogIEAjIyMjLi4gICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuICoqIy4gICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjKipAKi4gICAgICAgKiMqICAgICAgIyMjQCAgICAqICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4uKiMjIyMjQCAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyAgICAgICAgICoqICAgICAgKiAuICAgICAuKiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyAgICAgICAgICAgICAgIC4gICAgLkAjIyMjIyMjIyMjIyMqICAgICAgICAgICAgICAgICAqKkAgICpAIy4gICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyNAQCouICAgICAgICAgICAgICAgICojIyMjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgIEAqICpALiouICAuKipAKi4gICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIyMjIyMjIyMjIyMjIyMjKiAgICAgICAgICAgICAgICAqIyMjIyMjIyMjICAgICAgICAgICAgICAgICAgICAgICAgLiAuIC4gICAgICAuQC4qLiAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMqICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjLiAuKiAgICAgICAgICAgICAgICAgICAgICAgICAgLipAIyogQC4gICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjI0AgICAgICAgICAgICAgICAgICAuIyMjIyMjI0AgICojLiAgICAgICAgICAgICAgICAgICAgICAgLi4jIyMjIyMjIyMqICAgICAgICAgIC4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMuICAgICAgICAgICAgICAgICAgICAgQCMjIyMjQC4gICAqICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIy4gICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMqICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjQEBAQCMjIyMjIy4gICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyouICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAgICAgICAuQCNALiAgICAgICAgKiAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyMuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuICAgICAgIC4uICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIy4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4gICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qQCAgLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uICAgICAgICAgICAgICAgIC4gIC4uICAgICAuLiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uICAgICAgIC4qKiNAICAgICAgICAgICAgICAgICAgLi4uLi4uKioqQEAqLi5AQEBAQCMjIyMjIyMjIy4uQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQEBAQCouLi4gICAKICAgICAgICAuLi4uQEBAQEBAQEBAQEAjQEBAQCMjIyMjIyMjIyNAKi4uICAgICAgICAgIC4uLi4qQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLiAgICAKICAgICAgICAgKkAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAQEAuLi4uKkBAKipAQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyouLiAgICAKIyMjIyMjIyMjI0BAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyM=' },
+  m: { w:200, R0:24, S:0.283333, b64:'ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4uLi4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqQC4qQCMjIyMjIyMjQEAqKiNAQEBAQEAjI0AjIyMjIyMjIyMjQEBAQEAqLi4gICAgICAgICAgICAgIC4uLi4gLi4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAQC4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKi4uLi4qLiAgLkAqKi4gQCouKkBAQEAqLiAgLiojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMgICAgICAgICAgICAgICAgICAqQCouICAgICAgICAgICAgICAgICAgICAgICAuLi4uICAgICAgICAgICAgICAgICAqQCNALi4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLkBAKioqLioqKiogIC5AKiojKipAQEBAQC4gICAgICAgICAgICAqQCMjIyMjIyMjIyMjIyMjIyMjIyogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLkBALi4gICAgLi4gICAgICpAQCMjIyMjIyMjIyMjIyMjQC4qLi4uLi4uLiAgICAgKiNALiAuICAgICAgICAgICAgICAgICAKLiAgICAgICAgLkBAQEBAQEBALi4uLi4uLi4uLioqLkBALkAuKiMjI0AqQC4gLipAQC4qKiMjI0BAIyMjQEAgICAgICAgLkAjIyMjIyMjIyMjIyMjIyouLiAgICAgICAgICAgICAgICAgICAgICAuLi5AQEAqLi4uICAgICAgICAgLi4gICAuLi4uIyMuQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AjIyNAIyMjIyMjI0BAQEAqLi4uLi4gLi4uLi4KIyNAQCogIC5AQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AjQCMjI0AjIyMjIyMjKkBALiAgLiAjIyNAQEAuICAgICojIyMjIyMjQEAqLiAgICAgLi4uLi4gICAgICAgICAgICAgICAqIyMjI0BAIyMjIyMqQEBALkAjQCMjIyMjIyMjIyMjIyNAQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKICAgICAgICAqQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCouIC4uLiAuLi4qKkAqKiAgICAgICAuIyMjI0AgICAgICAgICAgIC4uLiAgICAgICAgICAgIC5AQCMjIyMuLkAjIyMjIyMjQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AjIyMjIyNAQC4KICAgICAgICAuLkBAIyMqLiouIC4uLipAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAICAgICAgICAuIyMjIyouKiogICAgICAgICAgLiAgICAgICAgICAgICAgICAgICAgIC4gICAgIEBAQCMjI0AgIC5AIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAQEAqLkBAICAuQCouLi4uICAgICAKICAgICAgICAuIC4uLiAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAQC4uICAuIyMjIyMjIyMjKi4gICAgICAgICAgICAgICAgICAgICAgICAgICAuKiojLiAgICAuKipALi4gKiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMuICAgICAgICAgKiMjQC4gICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAuIC4jIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQC4jIyMjIyMjIyMjI0AjICAgICAgICAgICAgICAgICAgICAgICAgIC5ALkAjIyouKiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy4qICAgICAgLkAuICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLkAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AjQC4gIC5AKi4gICAgICAgICAgICAgICAgICAgICAgICAgIC4qQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAqICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AqQCouLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyNAQCMqQCMjIyMjIyMqIC4uIEAjIyMjKiAqQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AuIC4qLiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNALiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjI0AuICAgLi5AKiAqIyMjQEAuKkBAKi4qIyMjIy4gKiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAIyMjQC4gICAgLkAuICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAI0BAKiAuLi4qLiAuICAgLkAgIEAjQCNAIyMjIyMjIyouLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQC4uICAjKiAgICAuQCogICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKkAjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuQCNAIyMjIyMjIy4gICAgICAuICAgIC4uIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AgICAuLioqKkAuLiAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqQEAjIyMjIyMjIyNAQCNAQEBAIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMjIyMjIyMjIyMjI0AqIyMjQEBAQEAjIyMjIyMjI0AjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqICAgIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLioqIyMjIyMjIyAgICAgICAgQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AuIyMjIyMjIyouKkAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuICojIyMjQCAgICAgICAgIC4qICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNALkAjIyMjIyMjQCNAKiAgICAuIyMjIyMjIyMjIyMjQCMjIyMjIyMjIyMjI0BALiAuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAqIyMjIyogLiojKiAgICAuLiAuKi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAqIyMjIyMjIyNALiAgICAgIC4qIyMjIyMjKiAgIC4jIyMjIyMjIC4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKkBAIyMjLi4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AgKiMjIyNALi4gICAgICAgICAuIyMjQC4gICAgICAqKkAjIyMjQC4gICAgIC5AICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKiMqICAgICAuIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQC4uLi4gICAgICAgICAgICAgLiMjKiAgICAgICAgIC5AKiMjIyogICAgICAqLi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uLiouKiMjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMgICAgICAgICAgICAgIC4qKiAgICAgICAgIC4qICAuICAgICAgICAgKiogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjIyNAQCogICAgICAgICAgICAgICAgICAgICAgICpAQEBAKi4uLkBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyAgICAgICAgICAgICAgICAgLiAgICAgICAgKi4uIy4gICAgIC5AQCAgIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5AIyMjIyMjIyMjIyMjIyMjICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyMjI0AuICAgICAgICAgICAgICAgICAgICAgICAgICAgICpAQCogIC4qIyMjKiAuLiAgLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjI0BALi4uICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI0AuICAjIyNAICoqICAgKiBAKi4qLi4gICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AuICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyMjIyMjIyMjIyMjI0AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qLiAgICAgICogLiAgICAgIC4qIyMjIy4gIC4gICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMuICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLi4gICAgIC4gICAgICAgLioqICouLiAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMqICAgICogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojQCogIC4qICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5AIyMjIyMjIyMjIyMjIyMjIyMjLiAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMjIyMjIyMjIyMjI0AuIC5AI0AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKiMjIyMjI0AqICojQCAgICAgICAgICAgICAgICAgIC4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjIyMjIyMqICAgICojIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLipAIyMjIyMjIyMjIyMjI0AuICAgICAgICAuICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyNALi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjIyMqICAgIEAjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMjKi4gICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKiMjIyMjIyMjIyMjIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKiMjIyMjIyMjIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyMjIyNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjQEAjIyMjIyMjIyMjIyMgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyNAQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqQC4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqQCouLiAgICAgICpAIyMjIyMjIyAgICAgICAgICAgIC4gICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyNAQEAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEBAQEAqICAgICAgICAgICAgIC5AKiAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLkAuICAgICAgICAgICAgKi4uICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyNALiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLkBALiAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLi4qQEAqLi4gLi4gICAgICAgIC4uLioqLi4uLi4uQEAqLi4qQEAuLi4qQCpALkBAQCouLi4uLiAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIypAIyMuICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4gLi4uLi4uLi5AKi5AKkBAQC4uLi4qQCMjQEAjIyMjIyMjIyMjIyMjIyMjLiAuQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQEBALi4uLi4uICAgICAKICAgICAgICAgICAgICAgICAgICAgIC4uLi4uLi4uLi5AKi4uKi4uLiAuKi4qQEBAQEBAQEBAQEBAKipAQEAjI0BAICAgICAgICAgICAgICAgICAgICAgICAgLkBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCouICAgICAKICAgICAgICAgLi4gLipAKkBAQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCouLiAgICAgICAgICAgLi4uLiAgICAuLipAQEBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMuLiAgICAgICAKICAgICAgICAgICAgICAgKi4qIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQEBAQCouLi4uICAgICAqQEBAQC4uLi4qQEBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjKiAgICAgICAgICAKQEBAQEBAQCouLi4uLi4qQEBAQEBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAQEBAQCoKIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyM=' },
+  l: { w:240, R0:28, S:0.333333, b64:'ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLi4qQCpAQEBAQEBAQEBAQCouKi4uLi4uLi4uLipAQEBAQCMjIyMjIyMjQEBAIC4uLi4uLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uICAgLi4uIC4qKkAjIyMqKkBAIyMjIyMqLkAqLkAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjKi4gICAgICAgICAgICAgICAgICAuQEBAQEAuLkAuICAgICAgICAgICAgICAuLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKkBAKi4uLi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKioqKi4uKiouLiAgLkAqIEAuQCouIyMjIyNALiAgICAgLipAQEBAQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAuLi4gICAgICAgICAgICAgICAgICAgICAgICAgIC4uLi4gLi4uICAgICAgICAgICAgICAuLi4uLi4uKkAjQEBAQEAuICAgICAgICAgICAgICAgLi4uLi4uICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLipAQCpAQC5AKi4gKiogICpAQC4qKi4gKiMjLkAqKioqICAgICAgICAgICAgICojIyMjIyMjIyMjIyMjIyMjIyMjIyMjQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuQEAuICAgICAgIC4uICAgICAgQEBAIyMjIyMjIyMjIyMjIyMjI0BAQEBAQCouLkBAQC4gICAgICAgKkAqLiAgICAgICAgICAgICAgICAgICAgICAgCi4gICAgICAgICAgLipAQEBAQEAqKi4uLi4uLiAgIC4uLi4uLi4qQCogLipAQCMjIyMjQCogLkAqQCMqLipAQCMjQEBAQCMjI0BAKiAgICAgICAgLiNAIyMjIyMjIyMjIyMjIyMjIyMqLiAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uLipAQEBAQC4gICAgICAgICAgICAgLi4gICAuLi4gLiMjIypAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQEAjQCNAIyMjIyMjIyMjQEBAQEAqLi4uLi4gIC4uLi4uIAojQEAuLi4gICAuQEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAQEAjI0BAQEAjQEAjIyMjQEAjIyogICAuLiMjIyNAQCouICAgICAqIyMjIyMjIyMjIyMjQC4uLiAgICAgICAgLiAgICAgICAgICAgICAgICAgICAqQCMjIyMjIyMjIyMjQEAjI0AgICoqLkBAQCNAIyMjIyMjIyNAIyNAKiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKIC4uKkAqLiAuLi4qIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCoqQC4uICAuLi5AIyNAQEAuICAgICAgIEAjIyMjIyNALiAgICAgICAgICAuKkBAQEAgICAgICAgICAgICAgICAgLkAjIyMjI0AqLkAjIyMjIyMqKkBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AqCiAgICAgICAgIC4jIyMjIyMjIyMjI0BAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyogICAgICAuICAgQEBAQCouLi4gICAgICAgICAgIEBAQCMqICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMjIyMjQCAgQCMjI0AjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjKi4qQCpAIyMjI0AqLi4gLgogICAgICAgICAgICAuLiojQCouLiAgICAgICAuKkBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAICAgICAgICAgIEAjIyMjIyoqI0AuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICpALiAgICAgQCoqKiMjIyogIC4uIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNALi4uLi4uIC4uICAuQCNAICAgICAgICAgICAKICAgICAgICAgICAgLi4uICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BALi4gIC4qIyMjIyMjIyMjI0AuLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4qQEAuICAgICAqQC4qKi4uIC4jIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyogICAgICAgICAgIC4jIyNALiAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuICAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCBAIyMjIyMjIyMjIyMjIyNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLkAqICojI0AgLkAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqKiAgICAgICAgIyouICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4qQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAQCoqLi5AQCouICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qKipAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLkAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AjIyMqLi4gICAuLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyMjIyMjIyNAIyMjIyMjIyMjIyMqQCNAKiMjIyMjIyNALi5AIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AuIC4uICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMuLiAuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICpAQCoqIyMjQEAqKiojQC4qQCMjIyMjI0AgICAgICAuKkAjIyNAICBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAQC4gIC5AQC4gICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMqLiAgIC4qIC4uQCogIyNALkBAQEAjIyNAQEBAIyMjIyMgICojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCpAQEAjQCAgICAgICAqLiAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQEAjQEAuIC4uLi4uLiAgLiAgICAqKiAgQCNAIyNAIyMjIyMjIyMjKi4uIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyoqLiAuIyMgICAgIC4qIyAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5AIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqI0BAIyMjIyMjIyMuICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjICAgIC4uLi5AKkAqLi4gICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAQEAjIyMjIyMjIyMjIyMjIyMjIyMjI0AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4jIyMjIyMjIyMjIyMjIyMjKi4gQCNAQEAuLkAuLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMgICAgIC4qICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICoqKiMjIyMjIyMjIyouICAuICAgIC4jLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BAIyMjIyMjIyMqIEAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNALiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICogKiMjIyMjIyMgICAgICAgICAgLi4gLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjLi4jIyMjIyMjI0AuIC4qLipAQEBAQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAgQCMjIyMjICAgICAgLiAgLi4uLi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMuICMjIyMjIyMjIyMjIyNAICAgICAgQCMjIyMjIyMjIyMjQEAqIyMjIyMjIyMjIyNAI0AqKi4gICogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjI0AuIC4qIyogICAgICAuLi4qQCogLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAuQCMjIyMjIyMjIyMuICAgICAgICAgLiMjIyMjIyMqLiAgICBAIyMjIyMjI0AgLiogICAgICAuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLipAQEAjIyMqLi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjLiAqIyMjIyMjLi4gICAgICAgICAgICAjIyMjQCogICAgICAgIEAqIyMjIyMjQCAgICAgICAgQCogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qQCMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAKkBAKi4gICAgICAgICAgICAgICAgLiMjIyogICAgICAgICAgICojQCMjIyMjICAgICAgIC4gLi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuQCogICAgLkAjKiNAQC5AKi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqQEBAIyAgICAgICAgICAgICAgICAuIyMuICAgICAgICAgICAuLiAgKiMqLiAgICAgICAgLi4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuLiogIyMjIyMjIyMjIyMjQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5AIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy4gICAgICAgICAgICAgICAgIC4gQCogICAgICAgICAgLiouICAgICAgICAgIC4gIC4qIy4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAqKi4uLi4gICAuQCojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKiogIyMgICAgICAgQCNAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMqICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuI0BALiAgLkAjIyMjQCAuLi4gICogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMjIyMjIyMjIyMjIyMjIyMjIyNAQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjIyMjIyogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyogICBAIyMjQCAqQC4gICAgICAqLiAuLiAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQC4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKiMjIyMjIyMjIyMjIyMjIyMjIy4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICpAQCAgICAgLi4gLipAICAuICAgIC4qQCMjIyNAICAuLi4gICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyMjIyMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qKiouIC4gLiAuLiAgLiAgICAgICAqQCMjQEBAICAgIC4gICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIyMjQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4gICAgICAuLiAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMjIyMjIyMjIyMjIyMjIyMgICAgIEAuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIC4jIyNAICAgKkAuICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjIyMjIyMjIyMjI0AqICAuQCMjLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMjIyMjI0AuLiMjIyAgICAgICAgICAgICAgICAgICAgIC4uCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMjIyMjIy4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgKiMjIyMjIyMjIyMjIyMjKiAgICAgKiMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuKiMjIyMjIyMjIyMjIyMjIyNAKiAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjIyMjIyMjIyNAQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqIyMjIyMjIyMjIyMjIyogICAgICMjIyAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjKiAgICAgICAgIC4gICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIyMjIy4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyMjIyMjIy4gICAgICAuLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyNAICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICojIyMjIyMjIyMjIyMjIy4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIyMjIyMjIyMjIyogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy4gICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAIyMjIyMjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICMjIyMjIyNAQEAqQCMjIyMjIyMjIyMjIyMgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjKkBALiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiouLi4uICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqQCouLi4gICAgICAgKi4jIyMjIyMjI0AgICAgICAgICAgICAgIC4gICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIyMjIyMjIyMjIyogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICpAI0AjQEAgICAgICAgICAgICAgICAgKiouIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiMjIyMjI0AqICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4gICAgICAgICAgICAgICAgKioqICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5AIyMjI0AuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICouICAgICAgICAgICAgIC5AQC4gICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAjIyMjIyogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4qLiAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIyMjI0AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEAjIyMuICAgICAuLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uKi4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4gIC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBAQC4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4uLkBAIyMjI0BAKi4qLi4uICAgICAgLi4qQEBAQEBAQEBAQEBAIyMjQEBAQCMjI0BAQEBAQEBAQEAjIyMjQEBAQEBAKi4uICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4uIyMqIyMjKiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIC4uLi4uLi4uKkBAQC5AQEBAQEAqKkBAQEBAQCMjI0AjIyMjIyMjIyMjIyMjIyMjIyMjQCAgKkBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AqLi4uLi4uICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLi4uLi4uKiouKiouLi4uLiAgICAgIC4uQEAuKkBAQEBAQEAqLkBAKi4uQEBAQCMjI0AuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAqQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0BALiAgICAgIAogICAgICAgICAgICAgICAuLi4uLi4uIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQEBALi4uICAgICAgICAgICAgICAgICAgICAgICAuLipAQEBAQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjLiAgICAgICAgICAKICAgICAgICAgICAuKiAgIC4uLi4uQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLi4uICAgIC4uLi4gICAgLi5AIyNAKiAgICAgLi4uLiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMqLi4uICAgICAgICAgCiAgICAgICAgICAgICAgICAgKiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjQEBAKi4uKkBAQEBAQEBAIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AqLi4uICAgICAgIAojIyMjIyMjIyNAQEBAQEBAQEBAQCoqQCMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI0AKIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMj' }
+};
+var geoPreset = null, geoRows = null, geoLat = null, geoLon = null;
+function geoDecode(p){
+  if (!p.rows) { try { p.rows = atob(p.b64).split('\n'); } catch (e) { p.rows = ['']; } }
+  return p.rows;
+}
+function pickPreset(){
+  var pane = $('geomap') && $('geomap').parentElement;
+  var w = (pane && pane.clientWidth) || window.innerWidth || 1000;
+  if (w < 560) return GEO_PRESETS.s;
+  if (w < 900) return GEO_PRESETS.m;
+  return GEO_PRESETS.l;
+}
+function renderGeo(rows, mr, mc){
+  var el = $('geomap'); if (!el) return;
+  while (el.firstChild) el.removeChild(el.firstChild);
+  for (var r = 0; r < rows.length; r++) {
+    var line = rows[r];
+    if (r === mr) {
+      while (line.length < mc + 1) line += ' ';
+      el.appendChild(document.createTextNode(line.slice(0, mc)));
+      var sp = document.createElement('span');
+      sp.className = 'geo-ping';
+      sp.textContent = '◉';
+      el.appendChild(sp);
+      el.appendChild(document.createTextNode(line.slice(mc + 1)));
+    } else {
+      el.appendChild(document.createTextNode(line));
+    }
+    if (r < rows.length - 1) el.appendChild(document.createTextNode('\n'));
+  }
+}
+function drawGeo(force){
+  var want = pickPreset();
+  if (!force && geoPreset === want) return;
+  geoPreset = want;
+  geoRows = geoDecode(want);
+  if (geoLat != null) placeGeoMarker(geoLat, geoLon);
+  else renderGeo(geoRows, -1, -1);
+}
+function placeGeoMarker(lat, lon){
+  lat = +lat; lon = +lon;
+  if (isNaN(lat) || isNaN(lon) || (!lat && !lon)) return;
+  geoLat = lat; geoLon = lon;
+  if (!geoPreset) { geoPreset = pickPreset(); geoRows = geoDecode(geoPreset); }
+  var p = geoPreset;
+  var c = Math.max(0, Math.min(p.w - 1, Math.floor((lon + 180) / 360 * p.w)));
+  var r = Math.max(0, Math.min(geoRows.length - 1, Math.round(p.R0 - p.S * lat)));
+  renderGeo(geoRows, r, c);
+  var el = $('geomap'), wrap = el.parentElement;
+  var cw = el.scrollWidth / p.w, ch = el.scrollHeight / geoRows.length;
+  wrap.scrollLeft = Math.max(0, c * cw - wrap.clientWidth / 2);
+  wrap.scrollTop = Math.max(0, r * ch - wrap.clientHeight / 2);
+  var cd = $('geomap-coord'); if (cd) cd.textContent = lat.toFixed(2) + ', ' + lon.toFixed(2);
+}
+drawGeo(true);
+var geoRz;
+window.addEventListener('resize', function(){ clearTimeout(geoRz); geoRz = setTimeout(function(){ drawGeo(false); }, 200); });
+
+function tzAbbr(){ try {
+  var parts = new Intl.DateTimeFormat('en-US',{timeZoneName:'short'}).formatToParts(new Date());
+  return (parts.find(function(p){ return p.type==='timeZoneName'; })||{}).value || Intl.DateTimeFormat().resolvedOptions().timeZone;
+} catch(e){ return 'local'; } }
+var tzLabel = tzAbbr();
+var resolvedTz = (function(){ try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e){ return 'unknown'; } })();
+function tick(){
+  var now = new Date();
+  set('date', now.toLocaleDateString('en-US',{weekday:'long'}), now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}));
+  set('time', pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds()));
+  set('time-sub', undefined); var ts=$('time-sub'); if(ts) ts.textContent = tzLabel + ' · ' + resolvedTz;
+  var off = now.getTimezoneOffset()*-1;
+  set('utcoff', (off>=0?'+':'') + off + ' min');
+}
+tick(); setInterval(tick,1000);
+var t0 = Date.now();
+setInterval(function(){ var s=Math.floor((Date.now()-t0)/1000);
+  set('uptime', pad(Math.floor(s/3600))+':'+pad(Math.floor(s%3600/60))+':'+pad(s%60)); },1000);
+
+set('ref', document.referrer || '(none, or hidden)');
+set('hist', String(history.length));
+set('vis', document.visibilityState);
+document.addEventListener('visibilitychange',function(){ set('vis',document.visibilityState); });
+window.addEventListener('load',function(){ setTimeout(function(){
+  try {
+    var nav = performance.getEntriesByType('navigation')[0];
+    if(nav && nav.duration) set('load', Math.round(nav.duration)+' ms');
+    else if(performance.timing && performance.timing.loadEventEnd) set('load',(performance.timing.loadEventEnd-performance.timing.navigationStart)+' ms');
+    else set('load','not exposed');
+  } catch(e){ set('load','unavailable'); }
+},0); });
+
+var _dpr = window.devicePixelRatio || 1;
+var _sw = screen.width || 0, _sh = screen.height || 0;
+if(_sw && _sh){
+  set('screen', _sw + ' × ' + _sh, Math.round(_sw*_dpr) + ' × ' + Math.round(_sh*_dpr) + ' physical px');
+  set('avail', (screen.availWidth||_sw) + ' × ' + (screen.availHeight||_sh));
+} else {
+  set('screen', 'not exposed', 'sandboxed context');
+  set('avail', 'not exposed');
+}
+set('dpr', String(_dpr));
+var gamut = mm('(color-gamut: rec2020)') ? 'rec2020' : mm('(color-gamut: p3)') ? 'p3' : mm('(color-gamut: srgb)') ? 'srgb' : 'unspecified';
+set('depth', (screen.colorDepth||24) + '-bit'); set('depth-sub', undefined); $('gamut-sub').textContent = 'bits · ' + gamut;
+set('hdr', mm('(dynamic-range: high)') ? 'high (HDR)' : 'standard');
+set('rmotion', mm('(prefers-reduced-motion: reduce)') ? 'reduce' : 'no-preference');
+set('cscheme', mm('(prefers-color-scheme: dark)') ? 'dark' : mm('(prefers-color-scheme: light)') ? 'light' : 'no-preference');
+function vp(){
+  var iw = window.innerWidth || document.documentElement.clientWidth || 0;
+  var ih = window.innerHeight || document.documentElement.clientHeight || 0;
+  set('vp', (iw && ih) ? (iw + ' × ' + ih) : 'not exposed');
+}
+vp(); window.addEventListener('resize',vp);
+function orient(){
+  try {
+    if(screen.orientation && screen.orientation.type) set('orient', screen.orientation.type);
+    else set('orient', (window.innerWidth>window.innerHeight ? 'landscape' : 'portrait'));
+  } catch(e){ set('orient','not exposed'); }
+}
+orient(); window.addEventListener('resize',orient);
+(function(){
+  var last=performance.now(), samples=[], n=0, done=false;
+  function finish(){
+    if(done) return; done=true;
+    samples.sort(function(a,b){ return a-b; });
+    var med = samples[Math.floor(samples.length/2)] || 0;
+    set('hz', med ? Math.round(med)+' Hz' : 'unavailable');
+  }
+  function s(t){ var d=t-last; last=t; if(d>0 && d<100) samples.push(1000/d); if(++n<60 && !done) requestAnimationFrame(s); else finish(); }
+  requestAnimationFrame(s);
+  setTimeout(finish, 2600);
+})();
+
+var ua = navigator.userAgent;
+set('ua', ua);
+logEvent('read navigator.userAgent + client hints');
+set('touchapi', ('ontouchstart' in window) ? 'present' : 'absent');
+set('cookies', navigator.cookieEnabled ? 'enabled' : 'blocked');
+set('pdf', ('pdfViewerEnabled' in navigator) ? (navigator.pdfViewerEnabled ? 'yes' : 'no') : 'not exposed');
+set('langs', (navigator.languages || [navigator.language]).join(', '));
+set('lang-sub', undefined); $('lang-sub').textContent = 'primary: ' + (navigator.language || 'unknown');
+var dnt = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+set('dnt', (dnt==='1'||dnt==='yes') ? 'enabled' : (dnt==='0'||dnt==='no') ? 'disabled' : 'unset');
+$('gpc-sub').textContent = 'gpc: ' + (('globalPrivacyControl' in navigator) ? (navigator.globalPrivacyControl ? 'on' : 'off') : 'not exposed');
+set('cores', navigator.hardwareConcurrency ? (navigator.hardwareConcurrency + ' threads') : 'not exposed');
+set('mem', navigator.deviceMemory ? ('at least ' + navigator.deviceMemory + ' GB') : 'not exposed');
+
+(function(){
+  var b='unknown', bv='', eng='unknown', m;
+  if(/Edg\//.test(ua))            { b='Edge';    bv=(ua.match(/Edg\/([\d.]+)/)||[])[1]||'';    eng='Blink'; }
+  else if(/OPR\//.test(ua))       { b='Opera';   bv=(ua.match(/OPR\/([\d.]+)/)||[])[1]||'';    eng='Blink'; }
+  else if(/Firefox\//.test(ua))   { b='Firefox'; bv=(ua.match(/Firefox\/([\d.]+)/)||[])[1]||''; eng='Gecko'; }
+  else if(/Chrome\//.test(ua))    { b='Chrome';  bv=(ua.match(/Chrome\/([\d.]+)/)||[])[1]||'';  eng='Blink'; }
+  else if(/Version\/.*Safari/.test(ua)) { b='Safari'; bv=(ua.match(/Version\/([\d.]+)/)||[])[1]||''; eng='WebKit'; }
+  set('browser', b, bv ? ('v' + bv) : 'version not in UA');
+  set('engine', eng);
+
+  var os='unknown', ov='';
+  if(/Windows NT 10/.test(ua))      { os='Windows'; ov=''; }
+  else if(/Windows NT 6\.3/.test(ua)) { os='Windows'; ov='8.1'; }
+  else if(/Windows NT 6\.2/.test(ua)) { os='Windows'; ov='8'; }
+  else if(/Windows NT 6\.1/.test(ua)) { os='Windows'; ov='7'; }
+  else if((m=ua.match(/Mac OS X ([\d_]+)/))) { os='macOS'; ov=m[1].replace(/_/g,'.'); }
+  else if((m=ua.match(/Android ([\d.]+)/)))  { os='Android'; ov=m[1]; }
+  else if((m=ua.match(/(?:iPhone|CPU) OS ([\d_]+)/))) { os='iOS'; ov=m[1].replace(/_/g,'.'); }
+  else if(/CrOS/.test(ua))  { os='ChromeOS'; }
+  else if(/Linux/.test(ua)) { os='Linux'; }
+  set('os', os, ov ? ('version ' + ov) : 'version not exposed');
+  set('platform', navigator.platform || 'not exposed', 'architecture not exposed');
+
+  var mobileToken = /\bMobi\b|Mobile\//.test(ua);
+  set('formfactor', mobileToken ? 'mobile' : 'desktop', 'UA token' + (/\bTablet\b/i.test(ua) ? ' (tablet)' : ''));
+})();
+
+if (navigator.userAgentData) {
+  if (typeof navigator.userAgentData.mobile === 'boolean')
+    set('formfactor', navigator.userAgentData.mobile ? 'mobile' : 'desktop', 'navigator.userAgentData.mobile');
+  if (navigator.userAgentData.platform) set('platform', navigator.userAgentData.platform, 'architecture not exposed');
+  if (navigator.userAgentData.getHighEntropyValues) {
+    navigator.userAgentData.getHighEntropyValues(['architecture','bitness','model','platformVersion']).then(function(d){
+      var archNote = [d.architecture, d.bitness && (d.bitness + '-bit')].filter(Boolean).join(' · ');
+      if (archNote) set('platform', navigator.userAgentData.platform || navigator.platform, archNote);
+      if (d.platformVersion) {
+        var major = parseInt(String(d.platformVersion).split('.')[0], 10) || 0;
+        if (navigator.userAgentData.platform === 'Windows') {
+          set('os', 'Windows', 'Windows ' + (major >= 13 ? '11' : major >= 1 ? '10' : 'pre-10') + ' · UA-CH ' + d.platformVersion);
+        } else if (d.platformVersion !== '0.0.0') {
+          set('os', navigator.userAgentData.platform || $('os').textContent, 'version ' + d.platformVersion + ' · UA-CH');
+        }
+      }
+      if (d.model) $('uadata-sub').textContent = 'navigator.userAgent · model: ' + d.model;
+    }).catch(function(){});
+  }
+}
+
+var ptr = mm('(pointer: fine)') ? 'fine' : mm('(pointer: coarse)') ? 'coarse' : mm('(pointer: none)') ? 'none' : 'unspecified';
+var hov = mm('(hover: hover)') ? 'hover-capable' : 'no-hover';
+set('pointer', ptr + ' pointer · ' + hov, (navigator.maxTouchPoints || 0) + ' touch points');
+
+try {
+  if (performance.memory && performance.memory.jsHeapSizeLimit)
+    set('heap', (performance.memory.jsHeapSizeLimit / 1048576 | 0) + ' MB', 'coarse, Chromium only');
+  else set('heap', 'not exposed');
+} catch(e){ set('heap', 'not exposed'); }
+
+if (navigator.getBattery) {
+  navigator.getBattery().then(function(b){
+    function upd(){
+      var note = b.charging ? 'charging' : 'discharging';
+      if (!b.charging && b.dischargingTime && b.dischargingTime !== Infinity) note += ' · ~' + Math.round(b.dischargingTime/60) + ' min left';
+      set('batt', Math.round(b.level*100) + '%', note);
+    }
+    upd();
+    b.addEventListener('levelchange', upd);
+    b.addEventListener('chargingchange', upd);
+  }).catch(function(){ set('batt', 'not exposed'); });
+} else set('batt', 'not exposed');
+
+(function(){
+  var bait = document.createElement('div');
+  bait.className = 'adsbox ad-banner ads sponsored pub_300x250 doubleclick';
+  bait.style.cssText = 'position:absolute;left:-9999px;top:-9999px;height:12px;width:12px';
+  document.body.appendChild(bait);
+  setTimeout(function(){
+    var hidden = bait.offsetHeight === 0 || bait.offsetParent === null || getComputedStyle(bait).display === 'none' || getComputedStyle(bait).visibility === 'hidden';
+    set('adblock', hidden ? 'hidden by client' : 'rendered normally');
+    bait.remove();
+  }, 250);
+})();
+
+(function(){
+  try {
+    var c = document.createElement('canvas');
+    var g = c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl');
+    if (!g) { set('gpu-vendor','no WebGL context'); set('gpu-renderer','no WebGL context'); set('gpu-ver','unavailable'); set('gpu-tex','unavailable'); return; }
+    var dbg = g.getExtension('WEBGL_debug_renderer_info');
+    set('gpu-vendor', dbg ? g.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : g.getParameter(g.VENDOR));
+    set('gpu-renderer', dbg ? g.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : g.getParameter(g.RENDERER));
+    set('gpu-ver', g.getParameter(g.VERSION));
+    $('gpu-shading').textContent = g.getParameter(g.SHADING_LANGUAGE_VERSION);
+    set('gpu-tex', g.getParameter(g.MAX_TEXTURE_SIZE) + ' px');
+    logEvent('read unmasked GPU', String(cleanText($('gpu-renderer'))).slice(0, 46));
+  } catch(e){ set('gpu-vendor','error reading WebGL'); }
+})();
+
+var fpCanvas='pending', fpWebgl='pending', fpAudio='pending', fpFonts='pending', fpMath='pending';
+function updateComposite(){
+  var sig = [ua, navigator.language, (navigator.languages||[]).join(','),
+    (screen.width||0)+'x'+(screen.height||0)+'x'+(screen.colorDepth||0), window.devicePixelRatio,
+    navigator.hardwareConcurrency, navigator.deviceMemory, navigator.maxTouchPoints,
+    resolvedTz, new Date().getTimezoneOffset(), navigator.platform,
+    fpCanvas, fpWebgl, fpAudio, fpFonts, fpMath, $('gpu-renderer').textContent].join('|');
+  var id = h32(sig);
+  set('fp-id', id);
+  logEvent('recomputed composite fingerprint', id);
+}
+try {
+  var cc = document.createElement('canvas'); cc.width = 300; cc.height = 64;
+  var x = cc.getContext('2d');
+  x.textBaseline = 'top'; x.font = '14px "Arial"';
+  x.fillStyle = '#f60'; x.fillRect(125,1,62,20);
+  x.fillStyle = '#069'; x.fillText('014/snitch fingerprint \u{1F512}', 2, 15);
+  x.fillStyle = 'rgba(102,204,0,0.7)'; x.fillText('014/snitch fingerprint \u{1F512}', 4, 17);
+  x.strokeStyle = 'rgba(120,80,220,0.8)'; x.beginPath(); x.arc(50,32,20,0,Math.PI*2); x.stroke();
+  fpCanvas = h32(cc.toDataURL()); set('fp-canvas', fpCanvas);
+  logEvent('canvas fingerprint', fpCanvas);
+} catch(e){ set('fp-canvas', 'blocked'); fpCanvas = 'blocked'; }
+try {
+  var cg = document.createElement('canvas');
+  var gg = cg.getContext('webgl') || cg.getContext('experimental-webgl');
+  if (gg) {
+    var parts = [];
+    parts.push((gg.getSupportedExtensions() || []).join(','));
+    [gg.RED_BITS,gg.GREEN_BITS,gg.BLUE_BITS,gg.ALPHA_BITS,gg.DEPTH_BITS,gg.STENCIL_BITS,gg.MAX_RENDERBUFFER_SIZE,
+     gg.MAX_VERTEX_ATTRIBS,gg.MAX_VERTEX_UNIFORM_VECTORS,gg.MAX_FRAGMENT_UNIFORM_VECTORS,
+     gg.MAX_TEXTURE_IMAGE_UNITS,gg.MAX_COMBINED_TEXTURE_IMAGE_UNITS].forEach(function(p){ try { parts.push(String(gg.getParameter(p))); } catch(e){} });
+    var d2 = gg.getExtension('WEBGL_debug_renderer_info');
+    if (d2) parts.push(gg.getParameter(d2.UNMASKED_VENDOR_WEBGL), gg.getParameter(d2.UNMASKED_RENDERER_WEBGL));
+    fpWebgl = h32(parts.join('|')); set('fp-webgl', fpWebgl);
+    logEvent('WebGL fingerprint', fpWebgl);
+  } else { set('fp-webgl', 'no WebGL'); fpWebgl = 'no-webgl'; }
+} catch(e){ set('fp-webgl', 'blocked'); fpWebgl = 'blocked'; }
+(function(){
+  (async function(){
+    try {
+      var Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!Ctx) { set('fp-audio', 'not supported'); fpAudio = 'unsupported'; updateComposite(); return; }
+      var ctx = new Ctx(1, 44100, 44100);
+      var osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = 10000;
+      var comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -50; comp.knee.value = 40; comp.ratio.value = 12; comp.attack.value = 0; comp.release.value = 0.25;
+      osc.connect(comp); comp.connect(ctx.destination); osc.start(0);
+      var buf = await ctx.startRendering();
+      var data = buf.getChannelData(0);
+      var acc = 0; for (var i = 4500; i < 5500; i++) acc += Math.abs(data[i]);
+      fpAudio = h32(acc.toString()); set('fp-audio', fpAudio);
+      logEvent('audio fingerprint', fpAudio);
+    } catch(e){ set('fp-audio', 'blocked'); fpAudio = 'blocked'; }
+    updateComposite();
+  })();
+})();
+(function(){
+  var base = ['monospace','sans-serif','serif'];
+  var test = ['Arial','Arial Black','Arial Narrow','Calibri','Cambria','Comic Sans MS','Consolas','Courier New',
+    'Georgia','Impact','Lucida Console','Lucida Sans Unicode','Palatino Linotype','Segoe UI','Tahoma','Times New Roman',
+    'Trebuchet MS','Verdana','MS Gothic','MS PGothic','Helvetica Neue','Menlo','Monaco','Roboto','Ubuntu','Cantarell',
+    'DejaVu Sans','Liberation Sans','Noto Sans','San Francisco','Andale Mono','Franklin Gothic Medium','Gill Sans','Optima'];
+  var span = document.createElement('span');
+  span.style.cssText = 'position:absolute;left:-9999px;font-size:72px';
+  span.textContent = 'mmmmmmmmmmlli WWW 014snitch';
+  document.body.appendChild(span);
+  var def = {};
+  base.forEach(function(b){ span.style.fontFamily = b; def[b] = { w: span.offsetWidth, h: span.offsetHeight }; });
+  var found = [];
+  test.forEach(function(f){
+    var hit = false;
+    base.forEach(function(b){ span.style.fontFamily = '"' + f + '",' + b;
+      if (span.offsetWidth !== def[b].w || span.offsetHeight !== def[b].h) hit = true; });
+    if (hit) found.push(f);
+  });
+  span.remove();
+  fpFonts = found.join(',') || 'none';
+  set('fp-fonts', found.length + ' of ' + test.length);
+  $('fp-fonts-sub').textContent = found.length ? (found.slice(0,6).join(', ') + (found.length > 6 ? ', …' : '')) : 'none from probe list';
+  logEvent('font probe', found.length + ' of ' + test.length + ' present');
+  updateComposite();
+})();
+try {
+  var mv = [Math.tan(-1e300),Math.sin(1e10),Math.cos(1e13),Math.acos(0.123),Math.atanh(0.5),Math.expm1(1),Math.sinh(1),Math.pow(Math.PI,-100)];
+  fpMath = h32(mv.join(',')); set('fp-math', fpMath);
+  logEvent('JS math signature', fpMath);
+} catch(e){ set('fp-math', 'unavailable'); fpMath = 'unavailable'; }
+updateComposite();
+
+(function(){
+  (async function(){
+    if (!navigator.permissions || !navigator.permissions.query) { set('perms', 'not supported'); return; }
+    var names = ['geolocation','camera','microphone','notifications','clipboard-read','persistent-storage'];
+    var out = [];
+    for (var k = 0; k < names.length; k++) {
+      try { var r = await navigator.permissions.query({ name: names[k] }); out.push(names[k].replace('-read','') + '=' + r.state); }
+      catch(e){}
+    }
+    set('perms', out.length ? out.join('   ') : 'none queryable');
+    logEvent('queried Permissions API', out.length + ' states, no prompt shown');
+  })();
+})();
+if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+  navigator.mediaDevices.enumerateDevices().then(function(list){
+    var by = function(k){ return list.filter(function(d){ return d.kind === k; }).length; };
+    set('devices', list.length + ' devices');
+    $('devices-sub').textContent = by('audioinput') + ' mic · ' + by('videoinput') + ' cam · ' + by('audiooutput') + ' out';
+  }).catch(function(){ set('devices', 'enumeration blocked'); });
+} else set('devices', 'not supported');
+(function(){
+  (async function(){
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        var e2 = await navigator.storage.estimate();
+        set('quota', e2.quota != null ? (e2.quota / 1073741824).toFixed(2) + ' GB' : 'not reported');
+        $('quota-sub').textContent = e2.usage != null ? ('in use: ' + (e2.usage / 1048576).toFixed(1) + ' MB') : 'StorageManager estimate';
+      } else set('quota', 'not supported');
+    } catch(e){ set('quota', 'unavailable'); }
+  })();
+})();
+(function(){
+  var t = function(k, fn){ try { return fn() ? k : null; } catch(e){ return null; } };
+  var s = [ t('localStorage', function(){ return !!window.localStorage; }),
+            t('sessionStorage', function(){ return !!window.sessionStorage; }),
+            t('indexedDB', function(){ return !!window.indexedDB; }),
+            t('CacheStorage', function(){ return !!window.caches; }) ].filter(Boolean);
+  set('storeapis', s.length ? s.join(', ') : 'none available');
+  var hw = [ ('bluetooth' in navigator) && 'WebBluetooth', ('usb' in navigator) && 'WebUSB',
+             ('serial' in navigator) && 'WebSerial', ('hid' in navigator) && 'WebHID' ].filter(Boolean);
+  set('hwapis', hw.length ? hw.join(', ') : 'none exposed');
+})();
+try {
+  var gp = (navigator.getGamepads && navigator.getGamepads()) || [];
+  set('pads', [].filter.call(gp, Boolean).length + ' connected');
+  window.addEventListener('gamepadconnected', function(){ set('pads', [].filter.call(navigator.getGamepads(), Boolean).length + ' connected'); });
+} catch(e){ set('pads', 'not exposed'); }
+
+function probeRTC(){
+  set('rtcip', 'probing…');
+  logEvent('opened a STUN connection to read local IPs');
+  try {
+    var pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    var found = {};
+    pc.createDataChannel('probe');
+    pc.onicecandidate = function(e){
+      if (!e.candidate) {
+        var arr = Object.keys(found);
+        set('rtcip', arr.length ? arr.join(', ') : 'none exposed (mDNS shielded)');
+        logEvent('WebRTC candidates', arr.length ? arr.join(', ') : 'none exposed');
+        try { pc.close(); } catch(_){}
+        return;
+      }
+      var m = e.candidate.candidate.match(/([0-9]{1,3}(?:\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(?::[a-f0-9]{0,4}){2,7}|[a-z0-9-]+\.local)/i);
+      if (m) found[m[1]] = 1;
+    };
+    pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).catch(function(){ set('rtcip', 'offer failed'); });
+    setTimeout(function(){
+      if (blank('rtcip') || /probing/.test($('rtcip').textContent)) {
+        var arr = Object.keys(found);
+        set('rtcip', arr.length ? arr.join(', ') : 'none exposed');
+      }
+    }, 3000);
+  } catch(e){ set('rtcip', 'not supported'); }
+}
+probeRTC();
+
+(function(){
+  var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!c) { set('conn', 'not exposed'); set('downlink', 'not exposed'); set('rtt', 'not exposed'); return; }
+  function upd(){
+    set('conn', c.effectiveType || 'unknown', c.type ? ('transport: ' + c.type) : 'navigator.connection');
+    set('downlink', c.downlink != null ? (c.downlink + ' Mbps' + (c.saveData ? ' · save-data on' : '')) : 'not exposed');
+    set('rtt', c.rtt != null ? (c.rtt + ' ms') : 'not exposed');
+  }
+  upd();
+  if (c.addEventListener) c.addEventListener('change', upd);
+})();
+
+function ipClass(ip){
+  var f = parseInt(String(ip).split('.')[0], 10);
+  if (isNaN(f)) return 'n/a';
+  if (f === 127) return 'loopback';
+  if (f <= 126) return 'class A';
+  if (f <= 191) return 'class B';
+  if (f <= 223) return 'class C';
+  if (f <= 239) return 'class D (multicast)';
+  return 'class E (reserved)';
+}
+var CC2CUR = {
+  US:'USD',CA:'CAD',GB:'GBP',AU:'AUD',NZ:'NZD',JP:'JPY',CN:'CNY',IN:'INR',
+  CH:'CHF',SE:'SEK',NO:'NOK',DK:'DKK',PL:'PLN',CZ:'CZK',HU:'HUF',
+  RU:'RUB',UA:'UAH',TR:'TRY',BR:'BRL',MX:'MXN',AR:'ARS',CL:'CLP',CO:'COP',PE:'PEN',
+  ZA:'ZAR',NG:'NGN',EG:'EGP',MA:'MAD',KE:'KES',IL:'ILS',SA:'SAR',AE:'AED',
+  QA:'QAR',KW:'KWD',SG:'SGD',HK:'HKD',TW:'TWD',KR:'KRW',TH:'THB',MY:'MYR',
+  ID:'IDR',PH:'PHP',VN:'VND',PK:'PKR',BD:'BDT',
+  AT:'EUR',BE:'EUR',CY:'EUR',EE:'EUR',FI:'EUR',FR:'EUR',DE:'EUR',GR:'EUR',
+  IE:'EUR',IT:'EUR',LV:'EUR',LT:'EUR',LU:'EUR',MT:'EUR',NL:'EUR',PT:'EUR',
+  SK:'EUR',SI:'EUR',ES:'EUR',HR:'EUR'
+};
+function wxLabel(c){
+  if (c === 0) return 'clear sky'; if (c <= 2) return 'partly cloudy'; if (c === 3) return 'overcast';
+  if (c <= 49) return 'fog'; if (c <= 59) return 'drizzle'; if (c <= 69) return 'rain'; if (c <= 79) return 'snow';
+  if (c <= 82) return 'rain showers'; if (c <= 99) return 'thunderstorm'; return 'n/a';
+}
+function jget(url, ms){
+  var ctl = new AbortController();
+  var t = setTimeout(function(){ ctl.abort(); }, ms || 6500);
+  return fetch(url, { signal: ctl.signal, referrerPolicy: 'no-referrer' })
+    .then(function(r){ clearTimeout(t); if (!r.ok) throw 0; return r.json(); })
+    .catch(function(){ clearTimeout(t); return null; });
+}
+function setCoords(lat, lon){
+  if (!blank('coords')) return;
+  lat = +lat; lon = +lon;
+  if (!lat && !lon) return;
+  set('coords', lat.toFixed(4) + ', ' + lon.toFixed(4));
+  placeGeoMarker(lat, lon);
+  jget('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true').then(function(wx){
+    var cw = wx && wx.current_weather;
+    if (cw) { set('temp', Math.round(cw.temperature) + '°C'); $('cond').textContent = wxLabel(cw.weathercode) + ' · wind ' + Math.round(cw.windspeed) + ' km/h'; }
+    else { set('temp', 'unavailable'); $('cond').textContent = 'weather fetch failed'; }
+  });
+}
+
+function runNetwork(){
+  (async function(){
+    var ipTimezone = null, ipCC = null;
+    logEvent('probing public IP');
+    jget('https://api64.ipify.org?format=json', 5000).then(function(d){
+      if (d && d.ip && d.ip.indexOf(':') > -1) set('ip6', d.ip);
+      else if (d && d.ip) set('ip6', 'not detected · IPv4-only path');
+      else set('ip6', 'unavailable');
+    });
+
+    var who   = await jget('https://ipwho.is/');
+    var ipapi = await jget('https://ipapi.co/json/');
+    var basic = await jget('https://api.ipify.org?format=json', 5000);
+
+    var ip4 = (who && who.ip) || (ipapi && ipapi.ip) || (basic && basic.ip) || null;
+    if (ip4) { set('ip4', ip4, ipClass(ip4)); logEvent('resolved public IP', ip4); }
+    else set('ip4', 'unavailable', 'all sources failed');
+
+    var info = await jget('https://ipinfo.io/' + (ip4 ? ip4 : '') + '/json');
+
+    if (who && who.success !== false) {
+      ipTimezone = ipTimezone || (who.timezone && who.timezone.id);
+      ipCC = ipCC || who.country_code;
+      fill('city', who.city, 'locality');
+      fill('region', who.region, who.region_code || 'state / province');
+      fill('country', who.country, who.country_code ? (who.country_code + (who.is_eu ? ' · EU' : '')) : 'iso code');
+      fill('postal', who.postal, 'approximate');
+      if (who.latitude && who.longitude) setCoords(who.latitude, who.longitude);
+      if (who.timezone) fill('tz', who.timezone.id, who.timezone.utc ? ('UTC ' + who.timezone.utc + (who.timezone.is_dst ? ' · DST' : '')) : 'iana zone');
+      if (who.connection) {
+        if (who.connection.asn) fill('asn', 'AS' + who.connection.asn, who.connection.domain || 'autonomous system');
+        fill('org', who.connection.org || who.connection.isp, who.connection.isp || 'network operator');
+      }
+      if (who.currency) fill('curr', who.currency.code, [who.currency.symbol, who.currency.name].filter(Boolean).join(' '));
+      if (who.country_code && who.calling_code) $('country-sub').textContent = who.country_code + ' · dial +' + who.calling_code;
+    }
+
+    if (info && !info.error) {
+      ipTimezone = ipTimezone || info.timezone;
+      ipCC = ipCC || info.country;
+      fill('city', info.city, 'locality');
+      fill('region', info.region, 'state / province');
+      fill('country', info.country, 'iso code');
+      fill('postal', info.postal, 'approximate');
+      if (info.loc) { var p = String(info.loc).split(','); if (p.length === 2) setCoords(p[0], p[1]); }
+      fill('tz', info.timezone, 'iana zone');
+      if (info.org) {
+        var m = String(info.org).match(/^(AS\d+)\s+(.*)$/);
+        if (m) { fill('asn', m[1], 'autonomous system'); fill('org', m[2], 'network operator'); }
+        else fill('org', info.org, 'network operator');
+      }
+      if (info.hostname) set('host', info.hostname);
+    }
+
+    if (ipapi && !ipapi.error) {
+      ipTimezone = ipTimezone || ipapi.timezone;
+      ipCC = ipCC || ipapi.country_code;
+      fill('city', ipapi.city, 'locality');
+      fill('region', ipapi.region, ipapi.region_code || 'state / province');
+      fill('country', ipapi.country_name, ipapi.country_code || 'iso code');
+      fill('postal', ipapi.postal, 'approximate');
+      if (ipapi.asn) fill('asn', ipapi.asn, 'autonomous system');
+      fill('org', ipapi.org, 'network operator');
+      if (ipapi.currency) fill('curr', ipapi.currency, ipapi.currency_name || 'local currency');
+      if (ipapi.latitude) setCoords(ipapi.latitude, ipapi.longitude);
+      fill('tz', ipapi.timezone, ipapi.utc_offset ? ('UTC ' + ipapi.utc_offset) : 'iana zone');
+    }
+
+    if (blank('host'))   set('host', 'no PTR record');
+    if (blank('asn'))    set('asn', 'not provided', 'autonomous system');
+    if (blank('org'))    set('org', 'not provided', 'network operator');
+    if (blank('city'))   set('city', 'not provided', 'locality');
+    if (blank('region')) set('region', 'not provided');
+    if (blank('country'))set('country', 'not provided');
+    if (blank('postal')) set('postal', 'not provided');
+    if (blank('curr')) {
+      var cval = ($('country').textContent || '').trim();
+      var ccode = /^[A-Z]{2}$/.test(cval) ? cval : (($('country-sub').textContent || '').match(/\b([A-Z]{2})\b/) || [])[1] || '';
+      if (ccode && CC2CUR[ccode]) set('curr', CC2CUR[ccode], 'ISO 4217 · by country');
+      else set('curr', 'not provided');
+    }
+    if (blank('coords')) set('coords', 'not provided');
+    if (blank('tz'))     set('tz', resolvedTz, 'from browser (no IP source)');
+    if (blank('temp'))   { set('temp', 'n/a'); $('cond').textContent = 'no coordinates available'; }
+
+    if (ipCC || $('city').textContent !== 'not provided') logEvent('geolocated the IP', [cleanText($('city')), cleanText($('country'))].filter(function(x){return x && x !== 'not provided';}).join(', '));
+
+    if (ipTimezone) {
+      var okTz = ipTimezone === resolvedTz;
+      set('tzcheck', okTz ? 'consistent' : ('browser ' + resolvedTz + '  vs  IP ' + ipTimezone), okTz ? 'clock matches the IP' : 'mismatch: VPN or travelling');
+    } else set('tzcheck', 'no IP timezone to compare', 'browser clock vs IP');
+
+    var locRegion = (navigator.language || '').split('-')[1];
+    if (locRegion && ipCC) {
+      var okLoc = locRegion.toUpperCase() === String(ipCC).toUpperCase();
+      set('loccheck', okLoc ? 'consistent' : ('locale ' + locRegion.toUpperCase() + '  vs  IP country ' + String(ipCC).toUpperCase()), okLoc ? 'region matches the IP' : 'mismatch, not unusual');
+    } else set('loccheck', locRegion ? 'no IP country to compare' : 'locale carries no region', 'language region vs IP');
+
+    var st = $('scan-status');
+    if (st) st.textContent = 'scan complete · ' + new Date().toLocaleTimeString('en-GB');
+    logEvent('network scan complete', logCount + ' reads, 0 bytes sent');
+    refreshDerived();
+  })();
+}
+runNetwork();
+
+setTimeout(function(){
+  document.querySelectorAll('.sv').forEach(function(el){
+    if (SPIN.test(el.textContent.trim())) el.textContent = 'unavailable';
+  });
+}, 9500);
+
+function collect(){
+  var out = [];
+  document.querySelectorAll('.frame[data-sec]').forEach(function(f){
+    var sec = f.getAttribute('data-sec');
+    var rows = [];
+    f.querySelectorAll('.stat[data-lbl]').forEach(function(s){
+      var val = cleanText(s.querySelector('.sv'));
+      var note = cleanText(s.querySelector('.ss'));
+      if (SPIN.test(val) || val === '-' || val === '') val = 'unavailable';
+      rows.push({ label: s.getAttribute('data-lbl'), value: val, note: note });
+    });
+    out.push({ section: sec, rows: rows });
+  });
+  return out;
+}
+function nowStamp(){
+  var d = new Date();
+  return d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+function padRight(s, n){ s = String(s); while (s.length < n) s += ' '; return s; }
+function reportText(){
+  var d = new Date();
+  var L = [];
+  L.push('014 / snitch // visitor data report');
+  L.push('generated   ' + d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' +
+         pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '  (' + resolvedTz + ')');
+  L.push('page url    ' + location.href);
+  L.push('user agent  ' + navigator.userAgent);
+  L.push(new Array(64).join('='));
+  collect().forEach(function(sec){
+    L.push('');
+    L.push('[ ' + sec.section.toUpperCase() + ' ]');
+    sec.rows.forEach(function(r){
+      var line = '  ' + padRight(r.label, 20) + '  ' + r.value;
+      if (r.note && r.note !== r.value) line += '   · ' + r.note;
+      L.push(line);
+    });
+  });
+  L.push('');
+  L.push(new Array(64).join('='));
+  L.push('all values were read in your own browser. nothing was stored or transmitted by 014/snitch.');
+  return L.join('\n');
+}
+function reportJSON(){
+  var o = {
+    report: '014/snitch',
+    generated: new Date().toISOString(),
+    timezone: resolvedTz,
+    page_url: location.href,
+    user_agent: navigator.userAgent,
+    sections: {}
+  };
+  collect().forEach(function(sec){
+    var s = {};
+    sec.rows.forEach(function(r){
+      s[r.label] = { value: r.value, note: (r.note && r.note !== r.value) ? r.note : '' };
+    });
+    o.sections[sec.section] = s;
+  });
+  return JSON.stringify(o, null, 2);
+}
+function download(fname, text, mime){
+  try {
+    var blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 120);
+    showToast('saved · ' + fname);
+  } catch(e){ showToast('download unavailable'); }
+}
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function reportHTML(){
+  var d = new Date();
+  var gen = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' +
+            pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  var body = '';
+  collect().forEach(function(sec){
+    var rows = sec.rows.map(function(r){
+      var note = (r.note && r.note !== r.value) ? esc(r.note) : '';
+      return '<tr><th>' + esc(r.label) + '</th><td class="v">' + esc(r.value) + '</td><td class="n">' + note + '</td></tr>';
+    }).join('');
+    body += '<section><h2>' + esc(sec.section) + '</h2><table><tbody>' + rows + '</tbody></table></section>';
+  });
+  return [
+'<!doctype html>',
+'<html lang="en"><head><meta charset="UTF-8">',
+'<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+'<title>SNITCH report · ' + esc(gen) + '</title>',
+'<link rel="preconnect" href="https://fonts.googleapis.com">',
+'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+'<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">',
+'<style>',
+':root{--bg:#060409;--text:rgba(240,235,248,.98);--mid:rgba(214,205,230,.92);--dim:rgba(190,178,212,.7);--accent:#bd93f9;--a1:rgba(189,147,249,.6);--a2:rgba(189,147,249,.34);--a3:rgba(189,147,249,.16);--a4:rgba(189,147,249,.07);--mono:"IBM Plex Mono",ui-monospace,"Courier New",monospace}',
+'*{box-sizing:border-box;margin:0;padding:0}',
+'html,body{background:var(--bg)}',
+'body{color:var(--text);font-family:var(--mono);line-height:1.55;padding:44px 22px;-webkit-font-smoothing:antialiased}',
+'.sheet{max-width:960px;margin:0 auto}',
+'header{position:relative;border:.5px solid var(--a3);background:rgba(9,6,16,.6);padding:34px 40px}',
+'header::before,header::after{content:"";position:absolute;width:26px;height:26px}',
+'header::before{top:-1px;left:-1px;border-top:1.5px solid var(--a1);border-left:1.5px solid var(--a1)}',
+'header::after{bottom:-1px;right:-1px;border-bottom:1.5px solid var(--a1);border-right:1.5px solid var(--a1)}',
+'h1{font-size:32px;font-weight:500;color:var(--accent);letter-spacing:.04em;text-shadow:0 0 24px var(--a4)}',
+'h1 .s{color:var(--a1)}h1 .r{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--dim);margin-left:6px}',
+'.tag{margin-top:8px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}',
+'.meta{margin-top:12px;font-size:11.5px;color:var(--dim);word-break:break-all}',
+'.meta b{color:var(--mid);font-weight:500}',
+'section{border:.5px solid var(--a3);border-top:none;background:rgba(9,6,16,.5)}',
+'section:first-of-type{border-top:.5px solid var(--a3);margin-top:22px}',
+'h2{font-size:12.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);padding:14px 22px;border-bottom:.5px solid var(--a3);background:var(--a4)}',
+'table{width:100%;border-collapse:collapse}',
+'tr{border-bottom:.5px solid var(--a4)}tbody tr:last-child{border-bottom:none}',
+'th{width:220px;text-align:left;vertical-align:top;font-weight:400;color:var(--dim);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;padding:12px 20px}',
+'td.v{color:var(--text);font-size:13px;word-break:break-word;vertical-align:top;padding:12px 12px 12px 0}',
+'td.n{color:var(--dim);font-size:11px;white-space:nowrap;text-align:right;vertical-align:top;padding:12px 22px 12px 8px}',
+'footer{margin-top:20px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--a1);text-align:center;line-height:2}',
+'@media(max-width:640px){body{padding:22px 12px}header{padding:22px}th{width:auto;display:block;padding:12px 20px 2px}td.v{display:block;padding:0 20px 4px}td.n{display:block;text-align:left;white-space:normal;padding:0 20px 12px}}',
+'</style></head><body><div class="sheet">',
+'<header>',
+'<h1>014<span class="s">/</span>SNITCH<span class="r">report</span></h1>',
+'<div class="tag">visitor data snapshot</div>',
+'<div class="meta"><b>generated</b>&nbsp;&nbsp;' + esc(gen) + '&nbsp;&nbsp;(' + esc(resolvedTz) + ')</div>',
+'<div class="meta"><b>page</b>&nbsp;&nbsp;' + esc(location.href) + '</div>',
+'<div class="meta"><b>user&nbsp;agent</b>&nbsp;&nbsp;' + esc(navigator.userAgent) + '</div>',
+'</header>',
+body,
+'<footer>every value was read inside the visitor\'s own browser<br>nothing was stored or transmitted &nbsp;·&nbsp; 014.ca</footer>',
+'</div></body></html>'
+  ].join('\n');
+}
+
+function relTime(ts){
+  var s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return s + ' s ago';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+  return Math.floor(s / 86400) + ' d ago';
+}
+(function initSnapshot(){
+  var KEY = '014snitch.snapshot';
+  var tries = 0;
+  var poll = setInterval(function(){
+    tries++;
+    var ip = ($('ip4').textContent || '').trim();
+    var fp = ($('fp-id').textContent || '').trim();
+    var ready = !SPIN.test(ip) && !SPIN.test(fp) && /^[0-9a-f]{8}$/.test(fp);
+    if (!ready && tries < 15) return;
+    clearInterval(poll);
+    var iph = h32(ip);
+    var prev = null;
+    try { prev = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){}
+    if (!prev || !prev.ts) {
+      set('revisit', 'first visit from this browser', 'no prior snapshot');
+    } else if (prev.fp === fp && prev.iph === iph) {
+      set('revisit', 'same device & network', 'last seen ' + relTime(prev.ts));
+    } else if (prev.fp === fp) {
+      set('revisit', 'same device · IP changed', 'last seen ' + relTime(prev.ts));
+    } else {
+      set('revisit', 'different fingerprint than last time', 'last seen ' + relTime(prev.ts));
+    }
+    try { localStorage.setItem(KEY, JSON.stringify({ fp: fp, iph: iph, ts: Date.now() })); }
+    catch(e){ set('revisit-sub', 'storage unavailable (private mode?)'); }
+  }, 1000);
+})();
+
+function countResolved(){
+  var total = 0, got = 0;
+  document.querySelectorAll('.frame[data-sec] .stat .sv').forEach(function(v){
+    total++;
+    var t = cleanText(v).toLowerCase();
+    if (t && t !== '-' && !SPIN.test(t) && !/^(not |no |unavailable|blocked|hidden|n\/a|none|off$)/.test(t)) got++;
+  });
+  return [got, total];
+}
+function fmtBig(n){
+  if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + ' billion';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + ' million';
+  return n.toLocaleString('en-US');
+}
+function exposure(){
+  var bits = 9;
+  if (/^[0-9a-f]{8}$/.test(fpCanvas)) bits += 7;
+  var gr = cleanText($('gpu-renderer'));
+  if (gr && gr.length > 8 && !/^no |error/i.test(gr)) bits += 6;
+  if (/\d+ of \d+/.test(cleanText($('fp-fonts')))) bits += 5;
+  if (/^[0-9a-f]{8}$/.test(fpAudio)) bits += 4;
+  bits += 2.5;
+  bits += 2.5;
+  bits += 2;
+  if (navigator.hardwareConcurrency) bits += 1.5;
+  if (navigator.deviceMemory) bits += 1;
+  var capped = bits >= 22;
+  bits = Math.min(bits, 22);
+  var oneIn = Math.round(Math.pow(2, bits));
+  set('x-unique',
+      capped ? 'rarer than 1 in 4 million' : '~1 in ' + fmtBig(oneIn),
+      capped ? 'a ceiling, not a measurement, and almost every normal browser hits it'
+             : 'a rough estimate from a handful of signals, not a live count');
+  var cr = countResolved();
+  set('x-signals', cr[0] + ' of ' + cr[1], 'separate things this page learned about you, no click needed');
+  var kb = 0;
+  try { kb = new Blob([reportJSON()]).size / 1024; } catch(e){}
+  set('x-bytes', kb.toFixed(1) + ' kB', 'a tracker sends that in the time this sentence took to read');
+}
+
+function pick(el){
+  var t = cleanText(el);
+  if (!t || t === '-' || SPIN.test(t) || /^(not |no |unavailable|n\/a|none|off$|hidden)/i.test(t)) return '';
+  return t;
+}
+function brokerLine(){
+  var el = $('broker-line'); if (!el) return;
+  function bold(t){ var b = document.createElement('b'); b.textContent = t; return b; }
+  var place = [pick($('city')), pick($('country'))].filter(Boolean).join(', ');
+  var os = pick($('os')), browser = pick($('browser')), org = pick($('org'));
+  var segs = [];
+  if (place) segs.push(['someone probably in ', place]);
+  if (os && browser) segs.push(['on ', os, ' with ', browser]);
+  else if (os) segs.push(['on ', os]);
+  if (org) segs.push(['coming through ', org]);
+  while (el.firstChild) el.removeChild(el.firstChild);
+  if (!segs.length) {
+    el.textContent = 'A data broker script running here reads the list below the moment the page loads, no prompt and no click. Whatever it cannot pin down from your network, it takes straight from your browser.';
+    return;
+  }
+  el.appendChild(document.createTextNode('A data broker script running here would tag you as '));
+  segs.forEach(function(seg, i){
+    if (i) el.appendChild(document.createTextNode(i === segs.length - 1 ? (segs.length > 2 ? ', and ' : ' and ') : ', '));
+    for (var k = 0; k < seg.length; k++) el.appendChild(k % 2 ? bold(seg[k]) : document.createTextNode(seg[k]));
+  });
+  el.appendChild(document.createTextNode('. Parts of that guess may be wrong, a VPN or a shared line would bend it, and it does not have to be right to be sold. Stitched to your last handful of sites, it is still a profile that points at one person, and you have not clicked anything.'));
+}
+function refreshDerived(){ exposure(); brokerLine(); }
+setTimeout(refreshDerived, 2600);
+setTimeout(refreshDerived, 6000);
+
+(function(){
+  var host = document.querySelector('.stat.act[data-lbl="Precise location"]');
+  if (!host) return;
+  host.addEventListener('click', function(){
+    if (!navigator.geolocation) { set('geopeek', 'not supported'); return; }
+    var cur = cleanText($('geopeek'));
+    if (/^requesting/.test(cur) || /^-?\d/.test(cur)) return;
+    set('geopeek', 'requesting…');
+    logEvent('requested precise GPS (your click)');
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var la = pos.coords.latitude, lo = pos.coords.longitude, acc = Math.round(pos.coords.accuracy);
+      set('geopeek', la.toFixed(5) + ', ' + lo.toFixed(5), 'accurate to about ' + acc + ' m');
+      logEvent('GPS granted', la.toFixed(4) + ', ' + lo.toFixed(4));
+      var m = cleanText($('coords')).match(/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/);
+      if (m) {
+        var d = haversine(la, lo, parseFloat(m[1]), parseFloat(m[2]));
+        set('geopeek-sub', 'the IP guess was ' + (d < 1 ? 'under 1' : Math.round(d)) + ' km off');
+      }
+    }, function(err){
+      set('geopeek', err && err.code === 1 ? 'you declined' : 'unavailable', 'nothing was sent either way');
+      logEvent('GPS ' + (err && err.code === 1 ? 'declined' : 'failed'));
+    }, { timeout: 10000, maximumAge: 0 });
+  });
+})();
+
+function shareCard(){
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(paintCard); } else { paintCard(); }
+}
+function paintCard(){
+  var W = 1200, H = 630;
+  var c = document.createElement('canvas'); c.width = W; c.height = H;
+  var x = c.getContext('2d');
+  x.fillStyle = '#060409'; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(189,147,249,0.45)'; x.lineWidth = 2; x.strokeRect(26, 26, W - 52, H - 52);
+  x.fillStyle = '#bd93f9'; x.font = '600 62px "IBM Plex Mono", monospace';
+  x.fillText('014/SNITCH', 64, 118);
+  x.fillStyle = 'rgba(190,178,212,0.7)'; x.font = '400 19px "IBM Plex Mono", monospace';
+  x.fillText('what my browser handed over, without being asked', 66, 150);
+  var rows = [
+    ['IP', cleanText($('ip4'))],
+    ['LOCATION', [cleanText($('city')), cleanText($('country'))].filter(function(s){ return s && s !== 'not provided'; }).join(', ')],
+    ['ISP', cleanText($('org'))],
+    ['DEVICE', cleanText($('os')) + '  ·  ' + cleanText($('browser'))],
+    ['GPU', cleanText($('gpu-renderer')).slice(0, 54)],
+    ['FINGERPRINT', cleanText($('fp-id'))],
+    ['UNIQUENESS', cleanText($('x-unique'))]
+  ];
+  var y = 224;
+  rows.forEach(function(r){
+    x.fillStyle = 'rgba(190,178,212,0.55)'; x.font = '400 17px "IBM Plex Mono", monospace';
+    x.fillText(r[0], 66, y);
+    x.fillStyle = 'rgba(240,235,248,0.98)'; x.font = '500 25px "IBM Plex Mono", monospace';
+    x.fillText(r[1] || '-', 300, y);
+    y += 52;
+  });
+  x.fillStyle = 'rgba(189,147,249,0.6)'; x.font = '400 15px "IBM Plex Mono", monospace';
+  x.fillText('read in the browser  ·  nothing was sent  ·  snitch.014.ca', 66, H - 52);
+  c.toBlob(function(b){
+    if (!b) return showToast('image export failed');
+    downloadBlob('014-snitch-card-' + nowStamp() + '.png', b);
+  }, 'image/png');
+}
+
+$('t-html').addEventListener('click', function(){
+  download('014-snitch-report-' + nowStamp() + '.html', reportHTML(), 'text/html;charset=utf-8');
+});
+$('t-json').addEventListener('click', function(){
+  download('014-snitch-report-' + nowStamp() + '.json', reportJSON(), 'application/json');
+});
+$('t-txt').addEventListener('click', function(){
+  download('014-snitch-report-' + nowStamp() + '.txt', reportText(), 'text/plain;charset=utf-8');
+});
+$('t-img').addEventListener('click', shareCard);
+$('t-copy').addEventListener('click', function(){
+  if (!navigator.clipboard) return showToast('clipboard unavailable');
+  navigator.clipboard.writeText(reportText()).then(function(){ showToast('full report copied'); }).catch(function(){ showToast('copy failed'); });
+});
+var WATCH = ['ip4','ip6','host','asn','org','city','region','country','postal','coords','tz','tzcheck','loccheck','curr','temp'];
+$('t-rescan').addEventListener('click', function(){
+  var before = {};
+  WATCH.forEach(function(id){ before[id] = cleanText($(id)); });
+  ['ip4','ip6','host','asn','org','city','region','country','postal','coords','tz','curr','temp','tzcheck','loccheck'].forEach(function(id){
+    var e = $(id); if (e) e.textContent = 'resolving…';
+  });
+  $('cond').textContent = 'current conditions';
+  var st = $('scan-status'); if (st) st.textContent = 're-scanning…';
+  logEvent('rescan requested');
+  runNetwork();
+  probeRTC();
+  setTimeout(refreshDerived, 3000);
+  setTimeout(function(){
+    var changed = 0;
+    WATCH.forEach(function(id){
+      var now = cleanText($(id));
+      if (now && !SPIN.test(now) && now !== before[id]) {
+        var row = $(id) && $(id).closest('.stat');
+        if (row) { row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash'); changed++; }
+      }
+    });
+    logEvent('rescan complete', changed ? (changed + ' value' + (changed === 1 ? '' : 's') + ' changed') : 'nothing changed');
+  }, 4200);
+  showToast('re-scanning…');
+});
+</script>
+</body>
+</html>
